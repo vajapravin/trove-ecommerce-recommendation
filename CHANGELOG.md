@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-03
+
+### Added
+
+- `SCOPE.md`: formal project scope document (problem, acceptance criteria, out-of-scope, risks, Definition of Done)
+
 ## [0.2.0] - 2026-08-03
 
 ### Added
