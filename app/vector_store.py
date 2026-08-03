@@ -121,5 +121,52 @@ def query_products(
     return hits
 
 
+def related_products(product_id: int, *, n_results: int = 4) -> List[Dict[str, Any]]:
+    """Find products similar to ``product_id`` by embedding proximity.
+
+    Implementation note: Chroma doesn't expose a "give me neighbors of this
+    stored id" primitive that returns metadata directly, so we fetch the stored
+    document for the source id and use it as the query text. This costs *zero*
+    LLM calls at runtime because Chroma retrieves the pre-computed embedding
+    for the source doc, then does a vector search inside the collection.
+
+    We ask for n+1 results and drop the source itself from the response.
+    """
+    coll = get_products_collection()
+    src = coll.get(ids=[str(product_id)], include=["documents"])
+    docs = src.get("documents") or []
+    if not docs or not docs[0]:
+        return []
+    hits = query_products(docs[0], n_results=n_results + 1)
+    return [h for h in hits if h["product_id"] != product_id][:n_results]
+
+
 def collection_size() -> int:
     return get_products_collection().count()
+
+
+# ---------------------------------------------------------------------------
+# Health helpers used by /admin/mesh-health
+# ---------------------------------------------------------------------------
+def ping_embed() -> tuple[bool, str]:
+    """Do a tiny embedding round-trip. Returns (ok, message)."""
+    from app.mesh_client import embed_one
+    try:
+        vec = embed_one("hello world")
+        return True, f"embed dim={len(vec)}"
+    except Exception as exc:  # pragma: no cover — surface any error to the UI
+        return False, str(exc)
+
+
+def ping_chat() -> tuple[bool, str]:
+    """Do a tiny chat round-trip. Returns (ok, message)."""
+    from app.mesh_client import chat_complete
+    try:
+        out = chat_complete(
+            [{"role": "user", "content": "Reply with the single word: pong"}],
+            max_tokens=8,
+            temperature=0.0,
+        )
+        return True, f"reply={out[:40]!r}"
+    except Exception as exc:  # pragma: no cover
+        return False, str(exc)
