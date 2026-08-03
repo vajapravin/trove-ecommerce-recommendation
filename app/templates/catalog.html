@@ -6,15 +6,30 @@
     <h1>Catalog</h1>
     <form method="get" action="/catalog" class="search-bar" data-track-search="true">
       <input type="search" name="q" value="{{ q }}" placeholder="Try 'agentic AI' or 'system design'…" autocomplete="off">
-      <select name="category">
-        <option value="">All categories</option>
-        {% for c in categories %}
-          <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
       <button type="submit" class="primary">Search</button>
     </form>
   </header>
+
+  {# Chip strip: categories + levels. Selecting a chip preserves the current query. #}
+  <div class="chip-strip">
+    <div class="chip-group">
+      <a class="chip {% if not category %}active{% endif %}"
+         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if level %}level={{ level }}{% endif %}">All</a>
+      {% for c in categories %}
+        <a class="chip {% if c == category %}active{% endif %}"
+           href="/catalog?category={{ c }}{% if q %}&q={{ q }}{% endif %}{% if level %}&level={{ level }}{% endif %}">{{ c }}</a>
+      {% endfor %}
+    </div>
+    <div class="chip-group level-group">
+      <span class="chip-label">Level:</span>
+      <a class="chip small {% if not level %}active{% endif %}"
+         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if category %}category={{ category }}{% endif %}">Any</a>
+      {% for l in levels %}
+        <a class="chip small {% if l == level %}active{% endif %}"
+           href="/catalog?level={{ l }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}">{{ l }}</a>
+      {% endfor %}
+    </div>
+  </div>
 
   {% if products %}
     <div class="product-grid">
@@ -33,12 +48,21 @@
     </div>
   {% else %}
     <div class="empty-state">
-      <h2>Nothing here yet</h2>
-      <p class="muted">
-        {% if q %}No matches for "{{ q }}". Try a broader search.
-        {% else %}The catalog is empty. An admin can add products from the admin panel.
-        {% endif %}
-      </p>
+      {% if q %}
+        <h2>No matches for "{{ q }}"</h2>
+        <p class="muted">
+          Try a broader term
+          {% if category or level %}
+            — or <a href="/catalog?q={{ q }}">clear the filters</a>.
+          {% else %}.{% endif %}
+        </p>
+      {% elif category or level %}
+        <h2>Nothing matches those filters</h2>
+        <p class="muted"><a href="/catalog">Show all products</a></p>
+      {% else %}
+        <h2>Nothing here yet</h2>
+        <p class="muted">The catalog is empty. An admin can add products from the admin panel.</p>
+      {% endif %}
     </div>
   {% endif %}
 </section>

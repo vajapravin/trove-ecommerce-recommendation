@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # --- Mesh API (mandatory — all LLM calls go through here) ---------------
     MESH_API_KEY: str = ""
-    MESH_BASE_URL: str = "https://api.mesh.io/v1"
+    MESH_BASE_URL: str = "https://api.meshapi.ai/v1"
     MESH_CHAT_MODEL: str = "openai/gpt-4o-mini"
     MESH_EMBED_MODEL: str = "openai/text-embedding-3-small"
 

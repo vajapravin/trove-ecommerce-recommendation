@@ -135,3 +135,61 @@ button:hover, .button:hover { opacity: 0.92; }
 .small { font-size: 0.85rem; }
 .empty-state { padding: 48px 0; text-align: center; }
 .empty-state h2 { margin-bottom: 8px; }
+
+/* ---------- Chip strip (catalog filters) ---------- */
+.chip-strip {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 8px 0 24px 0;
+}
+.chip-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip-label { font-size: 0.85rem; color: #78716c; margin-right: 4px; }
+.chip {
+  display: inline-block; padding: 4px 12px;
+  background: #fff; border: 1px solid #d6d3d1;
+  border-radius: 999px; font-size: 0.9rem; color: #44403c;
+  text-decoration: none;
+}
+.chip:hover { background: #f5f5f4; text-decoration: none; }
+.chip.small { font-size: 0.8rem; padding: 3px 10px; }
+.chip.active {
+  background: #4338ca; color: #fff; border-color: #4338ca;
+}
+.chip.active:hover { background: #3730a3; }
+
+/* ---------- Related products strip on product detail ---------- */
+.related { margin-top: 48px; }
+.related h2 { font-size: 1.25rem; margin-bottom: 16px; }
+
+/* ---------- Admin toolbar ---------- */
+.admin-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.admin-toolbar h1 { margin: 0; }
+.row-actions { display: flex; gap: 12px; align-items: center; }
+.card-form {
+  background: #fff; border: 1px solid #e7e5e4;
+  border-radius: 12px; padding: 20px; max-width: 720px;
+}
+.image-preview {
+  max-width: 240px; max-height: 160px; border-radius: 8px;
+  border: 1px solid #e7e5e4; object-fit: cover;
+}
+
+/* ---------- Mesh health dashboard ---------- */
+.health-grid {
+  display: grid; gap: 16px; margin: 24px 0;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.health-card {
+  padding: 16px 20px; background: #fff;
+  border: 1px solid #e7e5e4; border-radius: 12px;
+}
+.health-card h3 { margin-top: 0; font-size: 1rem; color: #44403c; }
+.health-card dl { margin: 0; }
+.health-card dt { font-size: 0.8rem; color: #78716c; margin-top: 8px; }
+.health-card dd { margin: 2px 0 0 0; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9rem; }
+.health-card code { font-size: 0.85rem; word-break: break-all; }
+.status { font-weight: 600; margin: 8px 0 4px 0; }
+.status.ok { color: #15803d; }
+.status.fail { color: #b91c1c; }
