@@ -1,6 +1,6 @@
 /*
  * Trove behavioral tracker
- * ----------------------------
+ * ------------------------
  * Buffers events on the client and flushes them in batches so tracking never
  * blocks the UI. Key properties:
  *
