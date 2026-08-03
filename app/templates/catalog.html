@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Catalog · Trove{% endblock %}
+{% block content %}
+<section class="catalog">
+  <header class="catalog-header">
+    <h1>Catalog</h1>
+    <form method="get" action="/catalog" class="search-bar" data-track-search="true">
+      <input type="search" name="q" value="{{ q }}" placeholder="Try 'agentic AI' or 'system design'…" autocomplete="off">
+      <select name="category">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="primary">Search</button>
+    </form>
+  </header>
+
+  {% if products %}
+    <div class="product-grid">
+      {% for p in products %}
+        <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}">
+          <div class="badge">{{ p.level }}</div>
+          <h3>{{ p.title }}</h3>
+          <p class="muted small">{{ p.category }}</p>
+          <p class="clip-3">{{ p.description }}</p>
+          <div class="row-between">
+            <span class="price">${{ '%.0f' % p.price }}</span>
+            <span class="muted small">View →</span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>Nothing here yet</h2>
+      <p class="muted">
+        {% if q %}No matches for "{{ q }}". Try a broader search.
+        {% else %}The catalog is empty. An admin can add products from the admin panel.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

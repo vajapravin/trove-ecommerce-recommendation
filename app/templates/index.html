@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Home · Trove{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Welcome back, {{ user.email.split('@')[0] }} 👋</h1>
+  <p class="lead">
+    Browse the catalog and we'll learn what you're into.
+    Your personalized recommendations refresh as you explore.
+  </p>
+  <div class="hero-actions">
+    <a class="button primary" href="/catalog">Browse catalog</a>
+    <a class="button" href="/recommendations">See what's for you</a>
+  </div>
+</section>
+{% endblock %}

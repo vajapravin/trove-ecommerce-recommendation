@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Admin · Products{% endblock %}
+{% block content %}
+<section class="admin">
+  <h1>Products</h1>
+
+  <details class="admin-form-wrap" open>
+    <summary>Add a new product</summary>
+    <form method="post" action="/admin/products" class="admin-form stack">
+      <label>Title <input type="text" name="title" required></label>
+      <label>Category <input type="text" name="category" required placeholder="e.g. AI & Agents"></label>
+      <label>Level
+        <select name="level">
+          <option value="beginner">beginner</option>
+          <option value="intermediate">intermediate</option>
+          <option value="advanced">advanced</option>
+        </select>
+      </label>
+      <label>Price (USD) <input type="number" step="0.01" name="price" value="0"></label>
+      <label>Tags (comma-separated) <input type="text" name="tags" placeholder="agents, langgraph, rag"></label>
+      <label>Image URL <input type="url" name="image_url" placeholder="https://…"></label>
+      <label>Description <textarea name="description" rows="4" required></textarea></label>
+      <button type="submit" class="primary">Create product</button>
+    </form>
+  </details>
+
+  <table class="admin-table">
+    <thead>
+      <tr><th>Title</th><th>Category</th><th>Level</th><th>Price</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+        <tr>
+          <td>{{ p.title }}</td>
+          <td>{{ p.category }}</td>
+          <td>{{ p.level }}</td>
+          <td>${{ '%.0f' % p.price }}</td>
+          <td>
+            <form method="post" action="/admin/products/{{ p.id }}/delete"
+                  onsubmit="return confirm('Delete this product?');">
+              <button class="link-button danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">No products yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
