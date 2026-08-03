@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}For you · Trove{% endblock %}
+{% block content %}
+<section class="recommendations">
+  <h1>For you</h1>
+  {% if recommendation %}
+    <div class="reco-card">
+      <div class="reco-narrative">
+        {{ recommendation.narrative | replace('\n', '<br>') | safe }}
+      </div>
+      <div class="reco-updated muted small">
+        Updated {{ recommendation.created_at.strftime('%b %d, %Y at %H:%M UTC') }}
+        · source: {{ recommendation.source }}
+      </div>
+    </div>
+    <div class="product-grid">
+      {% for p in products %}
+        <a class="product-card" href="/products/{{ p.id }}"
+           data-product-id="{{ p.id }}"
+           data-track-click="reco-{{ recommendation.id }}">
+          <div class="badge">{{ p.level }}</div>
+          <h3>{{ p.title }}</h3>
+          <p class="muted small">{{ p.category }}</p>
+          <p class="clip-3">{{ p.description }}</p>
+          <div class="row-between">
+            <span class="price">${{ '%.0f' % p.price }}</span>
+            <span class="muted small">View →</span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>We're still learning about you</h2>
+      <p class="muted">
+        Browse the catalog for a bit — as soon as you've explored a handful of courses,
+        we'll craft a personalized recommendation for you.
+      </p>
+      <a class="button primary" href="/catalog">Start browsing</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

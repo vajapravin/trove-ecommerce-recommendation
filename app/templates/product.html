@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title }} · Trove{% endblock %}
+{% block content %}
+<article class="product-detail" data-product-page data-product-id="{{ product.id }}">
+  <a class="back-link" href="/catalog">← Back to catalog</a>
+  <div class="badge">{{ product.level }}</div>
+  <h1>{{ product.title }}</h1>
+  <p class="muted">{{ product.category }} · ${{ '%.0f' % product.price }}</p>
+  <p class="lead">{{ product.description }}</p>
+  {% if product.tags %}
+    <div class="tags">
+      {% for t in product.tags.split(',') %}
+        <span class="tag">{{ t.strip() }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <div class="cta-row">
+    <button class="primary" data-track-click="cta-enroll" data-product-id="{{ product.id }}">Enroll</button>
+    <a href="/recommendations" class="button">See recommendations</a>
+  </div>
+</article>
+{% endblock %}
