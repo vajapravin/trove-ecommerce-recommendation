@@ -1,4 +1,4 @@
-name: Trove Checks
+name: SmartReco Checks
 
 on: [push]
 
@@ -9,7 +9,7 @@ permissions:
 # A newer push supersedes an older run. The server also rejects stale runs by run_id,
 # but cancelling here saves runner minutes.
 concurrency:
-  group: trove-checks-${{ github.ref }}
+  group: smartreco-checks-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -18,7 +18,7 @@ env:
   # Opaque identifier stamped into the OIDC token. NOT a URL that gets fetched, and NOT
   # environment-specific — the server accepts this exact string everywhere. Do not change it.
   OIDC_AUDIENCE: https://career.krishnaik.in
-  HACKATHON: trove-build-challenge-2026
+  HACKATHON: smartreco-build-challenge-2026
 
 jobs:
   checks:
