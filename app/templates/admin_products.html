@@ -2,9 +2,12 @@
 {% block title %}Admin · Products{% endblock %}
 {% block content %}
 <section class="admin">
-  <h1>Products</h1>
+  <div class="admin-toolbar">
+    <h1>Products</h1>
+    <a class="button" href="/admin/mesh-health">Mesh health →</a>
+  </div>
 
-  <details class="admin-form-wrap" open>
+  <details class="admin-form-wrap" {% if not products %}open{% endif %}>
     <summary>Add a new product</summary>
     <form method="post" action="/admin/products" class="admin-form stack">
       <label>Title <input type="text" name="title" required></label>
@@ -35,9 +38,10 @@
           <td>{{ p.category }}</td>
           <td>{{ p.level }}</td>
           <td>${{ '%.0f' % p.price }}</td>
-          <td>
+          <td class="row-actions">
+            <a class="link-button" href="/admin/products/{{ p.id }}/edit">Edit</a>
             <form method="post" action="/admin/products/{{ p.id }}/delete"
-                  onsubmit="return confirm('Delete this product?');">
+                  onsubmit="return confirm('Delete this product?');" class="inline-form">
               <button class="link-button danger" type="submit">Delete</button>
             </form>
           </td>

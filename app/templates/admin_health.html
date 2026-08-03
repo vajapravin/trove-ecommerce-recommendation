@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Admin · Mesh health{% endblock %}
+{% block content %}
+<section class="admin">
+  <a class="back-link" href="/admin/products">← Back to products</a>
+  <h1>Mesh health</h1>
+
+  <div class="health-grid">
+    <div class="health-card">
+      <h3>Configuration</h3>
+      <dl>
+        <dt>Base URL</dt><dd><code>{{ mesh_base_url }}</code></dd>
+        <dt>Chat model</dt><dd><code>{{ chat_model }}</code></dd>
+        <dt>Embed model</dt><dd><code>{{ embed_model }}</code></dd>
+      </dl>
+    </div>
+
+    <div class="health-card">
+      <h3>Chat</h3>
+      <p class="status {% if chat_ok %}ok{% else %}fail{% endif %}">
+        {{ '✓ working' if chat_ok else '✗ failing' }}
+      </p>
+      <p class="muted small"><code>{{ chat_msg }}</code></p>
+    </div>
+
+    <div class="health-card">
+      <h3>Embeddings</h3>
+      <p class="status {% if embed_ok %}ok{% else %}fail{% endif %}">
+        {{ '✓ working' if embed_ok else '✗ failing' }}
+      </p>
+      <p class="muted small"><code>{{ embed_msg }}</code></p>
+    </div>
+
+    <div class="health-card">
+      <h3>Dual-write sync</h3>
+      <dl>
+        <dt>SQLite products</dt><dd>{{ sql_count }}</dd>
+        <dt>Chroma vectors</dt><dd>{{ vec_count }}</dd>
+      </dl>
+      <p class="status {% if in_sync %}ok{% else %}fail{% endif %}">
+        {{ '✓ in sync' if in_sync else '⚠ drift detected' }}
+      </p>
+    </div>
+  </div>
+
+  <p class="muted small">
+    This dashboard fires a tiny chat and embed call each time it loads.
+    Costs are negligible (fractions of a cent) but avoid mashing refresh.
+  </p>
+</section>
+{% endblock %}

@@ -19,4 +19,26 @@
     <a href="/recommendations" class="button">See recommendations</a>
   </div>
 </article>
+
+{% if related %}
+<section class="related">
+  <h2>You might also like</h2>
+  <div class="product-grid">
+    {% for p in related %}
+      <a class="product-card" href="/products/{{ p.id }}"
+         data-product-id="{{ p.id }}"
+         data-track-click="related-of-{{ product.id }}">
+        <div class="badge">{{ p.level }}</div>
+        <h3>{{ p.title }}</h3>
+        <p class="muted small">{{ p.category }}</p>
+        <p class="clip-3">{{ p.description }}</p>
+        <div class="row-between">
+          <span class="price">${{ '%.0f' % p.price }}</span>
+          <span class="muted small">View →</span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}
