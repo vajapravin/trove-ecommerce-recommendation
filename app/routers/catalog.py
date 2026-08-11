@@ -143,25 +143,77 @@ def product_detail(
     if product is None or not product.is_active:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # "You might also like" — pure Chroma kNN, no LLM call.
-    related: list[Product] = []
-    try:
-        hits = vector_store.related_products(product.id, n_results=4)
-        if hits:
-            ids = [h["product_id"] for h in hits]
-            found = {
-                p.id: p
-                for p in db.query(Product)
-                .filter(Product.id.in_(ids), Product.is_active == True)  # noqa: E712
-                .all()
-            }
-            related = [found[i] for i in ids if i in found]
-    except Exception:
-        # Best-effort: never break product page if Chroma is unavailable.
-        related = []
+    # "You might also like" — similar products from the same category
+    per_page = 4
+    query = (
+        db.query(Product)
+        .filter(
+            Product.category == product.category,
+            Product.id != product.id,
+            Product.is_active == True,  # noqa: E712
+        )
+    )
+    total_related = query.count()
+    total_pages = max(1, (total_related + per_page - 1) // per_page)
+    related = query.order_by(Product.id.asc()).limit(per_page).all()
 
     return templates.TemplateResponse(
         request,
         "product.html",
-        {"user": user, "product": product, "related": related},
+        {
+            "user": user,
+            "product": product,
+            "related": related,
+            "total_pages": total_pages,
+            "total_related": total_related,
+        },
     )
+
+
+@router.get("/products/{product_id}/related")
+def product_related(
+    product_id: int,
+    page: int = Query(1, ge=1),
+    db: Session = Depends(get_db),
+):
+    """Return JSON list of similar category products for AJAX Load More."""
+    product = db.get(Product, product_id)
+    if product is None or not product.is_active:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    per_page = 4
+    offset = (page - 1) * per_page
+    query = (
+        db.query(Product)
+        .filter(
+            Product.category == product.category,
+            Product.id != product.id,
+            Product.is_active == True,  # noqa: E712
+        )
+    )
+    total_related = query.count()
+    total_pages = max(1, (total_related + per_page - 1) // per_page)
+    products = query.order_by(Product.id.asc()).offset(offset).limit(per_page).all()
+
+    return JSONResponse(
+        {
+            "products": [
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "description": p.description,
+                    "category": p.category,
+                    "level": p.level,
+                    "price": p.price,
+                    "image_url": p.image_url,
+                    "tags": p.tags,
+                }
+                for p in products
+            ],
+            "page": page,
+            "total_pages": total_pages,
+            "has_more": page < total_pages,
+            "total_products": total_related,
+        }
+    )
+

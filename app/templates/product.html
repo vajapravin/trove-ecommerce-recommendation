@@ -36,7 +36,7 @@
 
 {% if related %}
 <section class="related">
-  <h2>You might also like</h2>
+  <h2>You might also like in {{ product.category }}</h2>
   <div class="product-grid">
     {% for p in related %}
       <a class="product-card" href="/products/{{ p.id }}"
@@ -62,6 +62,104 @@
       </a>
     {% endfor %}
   </div>
+
+  {% if total_pages > 1 %}
+    <div class="load-more-container" style="gap: 16px; flex-wrap: wrap;">
+      <button id="loadMoreRelatedBtn"
+              class="load-more-button"
+              data-product-id="{{ product.id }}"
+              data-current-page="1"
+              data-total-pages="{{ total_pages }}">
+        Load More Similar Products
+      </button>
+      <a href="/catalog?category={{ product.category }}" class="button secondary">View All {{ product.category }} →</a>
+    </div>
+  {% else %}
+    <div class="load-more-container">
+      <a href="/catalog?category={{ product.category }}" class="button secondary">View All {{ product.category }} →</a>
+    </div>
+  {% endif %}
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const loadMoreBtn = document.getElementById('loadMoreRelatedBtn');
+  const productGrid = document.querySelector('.related .product-grid');
+
+  if (!loadMoreBtn || !productGrid) return;
+
+  loadMoreBtn.addEventListener('click', async () => {
+    const productId = loadMoreBtn.getAttribute('data-product-id');
+    let currentPage = parseInt(loadMoreBtn.getAttribute('data-current-page') || '1', 10);
+    const totalPages = parseInt(loadMoreBtn.getAttribute('data-total-pages') || '1', 10);
+
+    const nextPage = currentPage + 1;
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading similar products...';
+
+    try {
+      const resp = await fetch(`/products/${productId}/related?page=${nextPage}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (data.products && data.products.length > 0) {
+        data.products.forEach(p => {
+          const card = document.createElement('a');
+          card.className = 'product-card';
+          card.href = `/products/${p.id}`;
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+          card.setAttribute('data-product-id', p.id);
+          card.setAttribute('data-track-click', `related-of-${productId}`);
+
+          const thumbHtml = p.image_url ? `
+            <div class="product-card-thumb">
+              <img src="${p.image_url}" alt="${escapeHtml(p.title)}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
+            </div>
+          ` : '';
+
+          card.innerHTML = `
+            ${thumbHtml}
+            <div class="badge">${escapeHtml(p.level || 'beginner')}</div>
+            <h3>${escapeHtml(p.title)}</h3>
+            <p class="muted small">${escapeHtml(p.category)}</p>
+            <p class="clip-3">${escapeHtml(p.description || '')}</p>
+            <div class="row-between">
+              <span class="price">$${p.price.toFixed(2)}</span>
+              <span class="muted small">View →</span>
+            </div>
+          `;
+          productGrid.appendChild(card);
+        });
+
+        loadMoreBtn.setAttribute('data-current-page', nextPage);
+
+        if (nextPage >= data.total_pages || !data.has_more) {
+          loadMoreBtn.style.display = 'none';
+        } else {
+          loadMoreBtn.disabled = false;
+          loadMoreBtn.textContent = 'Load More Similar Products';
+        }
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
+    } catch (err) {
+      console.error('Failed to load similar products:', err);
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = 'Retry Loading';
+    }
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+});
+</script>
 {% endif %}
 {% endblock %}
+
