@@ -162,7 +162,11 @@ def _bootstrap() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _bootstrap()
+    from app.scheduler import init_scheduler, shutdown_scheduler
+    init_scheduler()
     yield
+    shutdown_scheduler()
+
 
 
 # ---------------------------------------------------------------------------

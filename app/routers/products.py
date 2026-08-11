@@ -156,3 +156,32 @@ def mesh_health(
             "in_sync": sql_count == vec_count if isinstance(vec_count, int) else False,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Digest logs view & manual execution trigger
+# ---------------------------------------------------------------------------
+@router.get("/digests")
+def list_digests(
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    from app.models import DigestLog
+    logs = db.query(DigestLog).order_by(DigestLog.created_at.desc()).all()
+    return templates.TemplateResponse(
+        request,
+        "admin_digests.html",
+        {"user": admin, "logs": logs},
+    )
+
+
+@router.post("/digests/trigger")
+def trigger_digest(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    from app.scheduler import run_daily_digest
+    run_daily_digest(db)
+    return RedirectResponse("/admin/digests", status_code=status.HTTP_303_SEE_OTHER)
+

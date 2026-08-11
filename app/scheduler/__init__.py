@@ -1,5 +1,7 @@
-"""APScheduler-based background jobs.
+"""APScheduler jobs and scheduling module.
 
-Populated on Day 5 with the daily digest job that generates and mock-delivers
-personalized recommendations to active users.
+Manages background scheduled jobs (e.g. daily digest creation).
 """
+from app.scheduler.digest_job import init_scheduler, run_daily_digest, shutdown_scheduler
+
+__all__ = ["init_scheduler", "run_daily_digest", "shutdown_scheduler"]

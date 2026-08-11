@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Sent Digest Logs · Admin · Trove{% endblock %}
+{% block content %}
+<section class="admin-digests">
+  <div class="row-between align-center page-header">
+    <div>
+      <h1>Sent Digest Logs</h1>
+      <p class="muted">Proactive daily recommendation digests delivered via mock email channel.</p>
+    </div>
+    <form action="/admin/digests/trigger" method="post" style="margin: 0;">
+      <button type="submit" class="button primary">⚡ Trigger Daily Digest Now</button>
+    </form>
+  </div>
+
+  {% if logs %}
+    <div class="table-container" style="margin-top: 24px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Recipient User ID</th>
+            <th>Subject</th>
+            <th>Channel</th>
+            <th>Timestamp</th>
+            <th>Content Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+            <tr>
+              <td>#{{ log.id }}</td>
+              <td>User #{{ log.user_id }}</td>
+              <td><strong>{{ log.subject }}</strong></td>
+              <td><span class="badge">{{ log.channel }}</span></td>
+              <td class="muted small">{{ log.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</td>
+              <td style="max-width: 400px; white-space: pre-wrap;" class="small clip-3">{{ log.body }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state" style="margin-top: 32px;">
+      <h3>No digest logs recorded yet</h3>
+      <p class="muted">Click "Trigger Daily Digest Now" above or wait for the scheduled daily execution.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
