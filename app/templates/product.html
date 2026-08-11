@@ -41,7 +41,10 @@
     {% for p in related %}
       <a class="product-card" href="/products/{{ p.id }}"
          data-product-id="{{ p.id }}"
-         data-track-click="related-of-{{ product.id }}">
+         data-track-click="related-of-{{ product.id }}"
+         target="_blank"
+         rel="noopener noreferrer">
+
         {% if p.image_url %}
           <div class="product-card-thumb">
             <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">

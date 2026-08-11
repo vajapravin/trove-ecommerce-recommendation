@@ -34,7 +34,7 @@
   {% if products %}
     <div class="product-grid">
       {% for p in products %}
-        <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}">
+        <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}" target="_blank" rel="noopener noreferrer">
           {% if p.image_url %}
             <div class="product-card-thumb">
               <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
@@ -124,7 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const card = document.createElement('a');
           card.className = 'product-card';
           card.href = `/products/${p.id}`;
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
           card.setAttribute('data-product-id', p.id);
+
 
           const thumbHtml = p.image_url ? `
             <div class="product-card-thumb">

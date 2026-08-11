@@ -22,7 +22,10 @@
       {% for p in products %}
         <a class="product-card" href="/products/{{ p.id }}"
            data-product-id="{{ p.id }}"
-           data-track-click="reco-{{ recommendation.id }}">
+           data-track-click="reco-{{ recommendation.id }}"
+           target="_blank"
+           rel="noopener noreferrer">
+
           <div class="badge">{{ p.level }}</div>
           <h3>{{ p.title }}</h3>
           <p class="muted small">{{ p.category }}</p>
