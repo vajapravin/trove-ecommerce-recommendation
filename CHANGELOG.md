@@ -9,8 +9,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 
 - `app/services/activity_summary.py`: user activity aggregation service (`summarize_user_activity`) returning structured `UserActivitySummary` with search queries, product interaction vectors, dwell metrics, and SHA256 event activity fingerprint.
 - `app/agent/`: LangGraph recommendation engine workflow (`analyze_activity` → `decide_retrieve` → `retrieve` → `evaluate` → `refine` → `generate`) with grounded product picks and persistence to `recommendations` table.
-- `app/scheduler/digest_job.py`: APScheduler daily digest job running background recommendation generation and recording mock email delivery logs to `digest_logs`.
-- `/admin/digests`: admin log viewer and manual trigger endpoint (`POST /admin/digests/trigger`).
+- `app/agent/nodes.py`: candidate re-ranking node (`rerank_node`) evaluating top-15 shortlist candidates down to top-5 picks.
+- `app/agent/graph.py`: LangSmith observability tracing setup (`LANGSMITH_TRACING`) attaching span metadata across graph nodes.
+
 
 
 

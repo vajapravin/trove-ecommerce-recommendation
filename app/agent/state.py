@@ -1,7 +1,7 @@
 """LangGraph agent state schema.
 
 Defines the state passed through each node of the recommendation workflow:
-    analyze_activity → decide_retrieve → retrieve → evaluate → [refine] → generate
+    analyze_activity → decide_retrieve → retrieve → evaluate → [refine] → rerank → generate
 """
 from __future__ import annotations
 
@@ -17,7 +17,8 @@ class AgentState(TypedDict, total=False):
     extracted_query: str
     category_filter: Optional[str]
     level_filter: Optional[str]
-    retrieved_products: List[Dict[str, Any]]
+    shortlist: List[Dict[str, Any]]
+    reranked_products: List[Dict[str, Any]]
     evaluation_passed: bool
     refine_count: int
     narrative: str

@@ -4,10 +4,11 @@ Each function takes `AgentState` and returns updated state dict keys.
 Nodes:
   1. analyze_activity: Summarizes behavior into query & optional metadata filters.
   2. decide_retrieve: Validates search criteria before retrieval.
-  3. retrieve: Queries Chroma vector store with semantic query + metadata filters.
+  3. retrieve: Queries Chroma vector store for a top-15 shortlist with metadata filters.
   4. evaluate: Checks if shortlist meets quality & relevance threshold.
   5. refine: Broadens/adjusts query parameters if evaluation fails.
-  6. generate: Produces persuasive narrative + product picks grounded in Chroma IDs.
+  6. rerank: Re-ranks top-15 shortlist candidates down to top-5 picks using Mesh LLM.
+  7. generate: Produces persuasive narrative + product picks grounded in Chroma IDs.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from app.config import get_settings
 from app.mesh_client import chat_complete
 from app.vector_store import query_products
 
-logger = logging.getLogger("trove.agent")
+logger = logging.getLogger("trove.agent.nodes")
 
 
 def analyze_activity_node(state: AgentState) -> Dict[str, Any]:
@@ -52,7 +53,7 @@ def analyze_activity_node(state: AgentState) -> Dict[str, Any]:
         "You are an e-commerce interest analysis AI. Analyze the shopper's recent behavior summary "
         "and return a JSON object with: \n"
         '  "search_query": string (a concise 3-6 word semantic search query capturing what they are looking for),\n'
-        '  "category": string or null (one primary category if evident, e.g. "AI", "Backend", "Data", "DevOps"),\n'
+        '  "category": string or null (one primary category if evident, e.g. "AI & Agents", "Backend", "Data", "DevOps", "Interview Prep"),\n'
         '  "level": string or null ("beginner", "intermediate", "advanced", or null).\n'
         "Output ONLY valid JSON."
     )
@@ -95,7 +96,7 @@ def decide_retrieve_node(state: AgentState) -> Dict[str, Any]:
 
 
 def retrieve_node(state: AgentState) -> Dict[str, Any]:
-    """Node 3: Semantic search via Chroma vector store with metadata filtering."""
+    """Node 3: Semantic search via Chroma vector store returning top-15 shortlist candidates."""
     query = state.get("extracted_query", "courses")
     cat = state.get("category_filter")
     lvl = state.get("level_filter")
@@ -123,16 +124,14 @@ def retrieve_node(state: AgentState) -> Dict[str, Any]:
         logger.info("Filtered retrieve returned 0 hits; trying unfiltered query: %r", query)
         hits = query_products(query_text=query, n_results=15)
 
-    return {"retrieved_products": hits}
-
+    return {"shortlist": hits}
 
 
 def evaluate_node(state: AgentState) -> Dict[str, Any]:
-    """Node 4: Check if retrieval yields sufficient relevant candidate products."""
-    hits = state.get("retrieved_products", [])
+    """Node 4: Check if retrieval yields sufficient candidate products."""
+    hits = state.get("shortlist", [])
     refine_count = state.get("refine_count", 0)
 
-    # We want at least 1 product; if zero products and refine_count < 2, trigger refine
     passed = len(hits) > 0 or refine_count >= 2
     return {"evaluation_passed": passed}
 
@@ -140,7 +139,6 @@ def evaluate_node(state: AgentState) -> Dict[str, Any]:
 def refine_node(state: AgentState) -> Dict[str, Any]:
     """Node 5: Broaden search criteria if evaluation failed."""
     refine_count = state.get("refine_count", 0) + 1
-    # Drop category and level filters to broaden retrieval
     return {
         "refine_count": refine_count,
         "category_filter": None,
@@ -148,27 +146,94 @@ def refine_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
+def rerank_node(state: AgentState) -> Dict[str, Any]:
+    """Node 6: Re-rank top-15 shortlist down to top-5 picks using Mesh LLM."""
+    shortlist = state.get("shortlist", [])
+    summary_text = state.get("formatted_summary", "")
+    query = state.get("extracted_query", "")
+
+    if not shortlist:
+        return {"reranked_products": []}
+
+    # Sort shortlist by Chroma distance (ascending) as baseline
+    sorted_shortlist = sorted(shortlist, key=lambda x: x.get("distance", 0.0))
+    default_top5 = sorted_shortlist[:5]
+
+    settings = get_settings()
+    if not settings.MESH_API_KEY:
+        logger.info("MESH_API_KEY not set; using vector distance for top-5 shortlist re-ranking")
+        return {"reranked_products": default_top5}
+
+    candidates_formatted = "\n".join(
+        f"- ID {h['product_id']}: '{h['title']}' (Category: {h['category']}, Level: {h['level']}) — {h.get('tags', '')}"
+        for h in shortlist
+    )
+
+    system_prompt = (
+        "You are an expert e-commerce re-ranking system. Re-rank the provided candidate products "
+        "based on how strongly they match the user's specific intent and activity summary.\n"
+        "Return a JSON object with:\n"
+        '  "ranked_product_ids": list of integers (the top 5 product IDs in descending order of relevance).\n'
+        "Output ONLY valid JSON."
+    )
+
+    user_prompt = (
+        f"User Activity Summary:\n{summary_text}\n\n"
+        f"Inferred Search Query: '{query}'\n\n"
+        f"Candidates (Top 15 retrieved):\n{candidates_formatted}\n"
+    )
+
+    try:
+        raw_response = chat_complete(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(raw_response)
+        ranked_ids = parsed.get("ranked_product_ids", [])
+        shortlist_map = {h["product_id"]: h for h in shortlist}
+
+        reranked = [shortlist_map[pid] for pid in ranked_ids if pid in shortlist_map]
+        if not reranked:
+            reranked = default_top5
+        elif len(reranked) < 3:
+            for item in default_top5:
+                if item not in reranked:
+                    reranked.append(item)
+
+        return {"reranked_products": reranked[:5]}
+    except Exception as exc:
+        logger.warning("LLM rerank node error (%s); falling back to vector distance top-5", exc)
+        return {"reranked_products": default_top5}
+
+
 def generate_node(state: AgentState) -> Dict[str, Any]:
-    """Node 6: Write persuasive personalized narrative & pick products grounded in Chroma retrieval."""
-    hits = state.get("retrieved_products", [])
+    """Node 7: Write persuasive personalized narrative & pick products grounded in re-ranked candidate IDs."""
+    reranked = state.get("reranked_products", [])
+    if not reranked:
+        reranked = state.get("shortlist", [])[:5]
+
     summary_text = state.get("formatted_summary", "")
     settings = get_settings()
 
-    if not hits:
+    if not reranked:
         return {
             "narrative": "We noticed your recent visits! Browse our full catalog to discover great learning paths.",
             "recommended_product_ids": [],
         }
 
-    candidate_ids = [h["product_id"] for h in hits]
+    candidate_ids = [h["product_id"] for h in reranked]
     candidate_summary = "\n".join(
         f"- ID {h['product_id']}: '{h['title']}' | Category: {h['category']} | Level: {h['level']} | Price: ${h['price']:.2f}"
-        for h in hits[:8]
+        for h in reranked
     )
 
     fallback_picks = candidate_ids[:3]
     fallback_narrative = (
-        f"Based on your recent interest in {hits[0]['category']} and related topics, "
+        f"Based on your recent interest in {reranked[0]['category']} and related topics, "
         f"we have selected top courses tailored for your journey. Explore these recommendations below to level up your skills!"
     )
 
@@ -192,7 +257,7 @@ def generate_node(state: AgentState) -> Dict[str, Any]:
 
     user_prompt = (
         f"Shopper Activity Summary:\n{summary_text}\n\n"
-        f"Candidates (retrieve from catalog):\n{candidate_summary}\n"
+        f"Candidates (Re-ranked for shopper):\n{candidate_summary}\n"
     )
 
     try:
@@ -209,7 +274,6 @@ def generate_node(state: AgentState) -> Dict[str, Any]:
         narrative = parsed.get("narrative") or fallback_narrative
         chosen_ids = parsed.get("product_ids") or fallback_picks
 
-        # Enforce strict grounding: filter out any ID not present in candidate_ids
         grounded_ids = [pid for pid in chosen_ids if pid in candidate_ids]
         if not grounded_ids:
             grounded_ids = fallback_picks
