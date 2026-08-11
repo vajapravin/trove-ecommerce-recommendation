@@ -17,37 +17,41 @@ Built for the **SmartReco Build Challenge 2026**.
 - **Semantic search** — the `/catalog?q=...` route retrieves through Chroma with metadata filtering by category and level
 - **"You might also like"** — a zero-LLM semantic kNN strip on every product detail page
 - **Non-blocking behavioral tracking** — batched, throttled frontend queue that survives page unload via `sendBeacon`
+- **Activity summary service** — aggregates user behavior into structured signals and SHA256 activity fingerprints
 - **Admin health dashboard** at `/admin/mesh-health` — pings Mesh chat + embeddings and shows SQLite/Chroma sync status
-- **Agentic recommendation engine** (Day 4) built as a **LangGraph** state machine
-- **Scheduled daily digest** (Day 5) via APScheduler with mock delivery to a `DigestLog` table
-- **LangSmith tracing** wired through the whole agent workflow (Day 5)
-- **Retrieval polish** — metadata filtering by category / level (Day 6 adds LLM re-ranking)
+- **Agentic recommendation engine** built as a **LangGraph** state machine (`analyze_activity` → `decide_retrieve` → `retrieve` → `evaluate` → `refine` → `rerank` → `generate`)
+- **Trigger policy & fingerprint caching** — enforces `RECO_MIN_NEW_EVENTS` and `RECO_MIN_INTERVAL_MINUTES`, skipping LLM calls on fingerprint match for zero-cost repeat visits
+- **Scheduled daily digest** via **APScheduler** running proactive background recommendations and logging to `digest_logs` with admin view at `/admin/digests`
+- **Retrieval re-ranking** — two-stage candidate selection (top-15 shortlist → top-5 LLM re-rank)
+- **LangSmith observability tracing** — full span tree visibility across all agent graph nodes
 
 ---
 
 ## Architecture
 
 ```
-┌────────────────────┐        ┌─────────────────────────────────────────┐
-│  Browser (Jinja2)  │        │              FastAPI backend            │
-│                    │        │                                         │
-│  tracker.js queue  │──POST──▶  /events (batched ingest, non-blocking) │
-│  sendBeacon on     │        │                                         │
-│  unload            │        │  Trigger check ──▶ Agent (LangGraph):   │
-│                    │◀───────│    analyze → retrieve (Chroma) →        │
-│  /recommendations  │        │    evaluate → refine → generate         │
-└────────────────────┘        │                                         │
-                              │  APScheduler ──▶ daily digest job       │
-                              └──────┬──────────────────┬───────────────┘
-                                     │                  │
-                                     ▼                  ▼
-                              ┌─────────────┐    ┌──────────────┐
-                              │   SQLite    │    │   Chroma     │
-                              │ (via SQLA)  │    │ (embeddings) │
-                              └─────────────┘    └──────────────┘
-                                     ▲                  ▲
-                                     └────── dual-write ┘
-                                          (products only)
+┌────────────────────┐        ┌────────────────────────────────────────────────────────┐
+│  Browser (Jinja2)  │        │                    FastAPI backend                     │
+│                    │        │                                                        │
+│  tracker.js queue  │──POST──▶  /events (batched ingest, non-blocking)                │
+│  sendBeacon on     │        │                                                        │
+│  unload            │        │  Trigger Check (Policy & Fingerprint Cache):           │
+│                    │        │    ├── Skip LLM if fingerprint matches / throttled     │
+│  /recommendations  │◀───────│    └── Run Agent (LangGraph):                          │
+└────────────────────┘        │          analyze → retrieve (Chroma) →                 │
+                              │          evaluate → refine → rerank → generate         │
+                              │                                                        │
+                              │  APScheduler ──▶ Daily digest job (mock delivery)      │
+                              └──────────┬───────────────────────┬─────────────────────┘
+                                         │                       │
+                                         ▼                       ▼
+                                  ┌─────────────┐         ┌──────────────┐
+                                  │   SQLite    │         │   Chroma     │
+                                  │ (via SQLA)  │         │ (embeddings) │
+                                  └─────────────┘         └──────────────┘
+                                         ▲                       ▲
+                                         └────── dual-write ─────┘
+                                              (products only)
 
   All LLM + embedding calls flow through the Mesh API (OpenAI-compatible).
 ```
@@ -72,21 +76,20 @@ Built for the **SmartReco Build Challenge 2026**.
 
 ---
 
-## Setup
+## Setup & Running
 
 ```bash
-# 1. Create and activate a virtualenv
-python3.11 -m venv .venv
+# 1. Activate virtual environment
 source .venv/bin/activate     # Windows: .venv\Scripts\activate
 
-# 2. Install dependencies
+# 2. Install dependencies (if needed)
 pip install -r requirements.txt
 
 # 3. Configure secrets
 cp .env.example .env
 # Edit .env — paste your MESH_API_KEY
 
-# 4. Run
+# 4. Run application
 python run.py
 # Or:  uvicorn app.main:app --reload
 ```
@@ -95,17 +98,15 @@ Then open <http://localhost:8000>.
 
 ### First-run bootstrap
 
-On first boot the app creates the SQLite DB, seeds an admin account, and (if `SEED_CATALOG=true` and `MESH_API_KEY` is set) loads a small starter catalog through the dual-write path — so both SQLite and Chroma are populated.
+On first boot the app creates the SQLite DB, seeds an admin account, and (if `SEED_CATALOG=true` and `MESH_API_KEY` is set) loads a starter catalog through the dual-write path — so both SQLite and Chroma are populated.
 
 Default admin: **`admin@trove.local`** / **`admin123`** *(change in `.env`)*.
 
 ### Verify things are wired
 
-Log in as admin and visit **`/admin/mesh-health`** — you'll see:
+Log in as admin and visit **`/admin/mesh-health`**:
 - Chat and embed pings (green = Mesh is reachable and your key/models are valid)
 - SQLite product count vs. Chroma vector count (equal = dual-write is in sync)
-
-If chat/embed show red, the model IDs in `.env` don't match Mesh's catalog. Get the correct IDs from your Mesh dashboard.
 
 ---
 
@@ -123,31 +124,36 @@ trove/
 │   ├── mesh_client.py        # Mesh API (OpenAI-compatible) wrapper
 │   ├── vector_store.py       # Chroma wrapper + kNN + ping helpers
 │   ├── services/
+│   │   ├── activity_summary.py # User event aggregation & fingerprinting
 │   │   └── dual_write.py     # SQLite + Chroma coordinated writes
 │   ├── routers/              # auth, pages, catalog, products (admin), events, recommendations
-│   ├── agent/                # LangGraph state machine  (Day 4)
-│   ├── scheduler/            # APScheduler jobs         (Day 5)
-│   ├── templates/            # Jinja2
+│   ├── agent/                # LangGraph state machine & trigger policy
+│   │   ├── graph.py          # StateGraph compilation & LangSmith setup
+│   │   ├── nodes.py          # analyze, decide, retrieve, evaluate, refine, rerank, generate
+│   │   ├── policy.py         # trigger threshold & fingerprint cache policy
+│   │   ├── runner.py         # recommendation agent execution & DB persistence
+│   │   └── state.py          # AgentState schema
+│   ├── scheduler/            # APScheduler background daily digest job
+│   ├── templates/            # Jinja2 HTML templates
 │   └── static/               # CSS + tracker.js
-├── data/                     # SQLite lives here
-├── chroma_db/                # vector store persistence
+├── data/                     # SQLite persistence
+├── chroma_db/                # Vector store persistence
 ├── .github/workflows/        # CI (SmartReco checks)
 ├── .env.example
-├── .gitignore
 ├── requirements.txt
 └── run.py
 ```
 
 ---
 
-## Roadmap (build days)
+## Roadmap (build milestones)
 
-- [x] **Day 1** — scaffold, auth, DB schema, tracking, dual-write, base templates
-- [x] **Day 2** — full admin CRUD + edit page, catalog chips/filters, "you might also like", Mesh health dashboard, Trove rebrand
-- [ ] **Day 3** — beyond-baseline tracking: dwell heatmap, referrer capture, activity dashboard
-- [ ] **Day 4** — LangGraph agent + RAG retrieval + recommendation storage + trigger logic
-- [ ] **Day 5** — APScheduler daily digest + LangSmith tracing
-- [ ] **Day 6** — retrieval re-ranking, polish, final README, demo video
+- [x] **Day 1** — scaffold, auth, DB schema, tracking, dual-write, base templates (0.1.0)
+- [x] **Day 2** — full admin CRUD + edit page, catalog chips/filters, "you might also like", Mesh health dashboard, Trove rebrand (0.2.0)
+- [x] **Day 3** — SCOPE.md documentation & activity summary service
+- [x] **Day 4** — LangGraph agent + RAG retrieval + recommendation storage + trigger policy & fingerprint caching
+- [x] **Day 5** — APScheduler daily digest + admin digest log view + LangSmith tracing
+- [x] **Day 6** — two-stage retrieval re-ranking, final verification & v1.0.0 release
 
 ---
 

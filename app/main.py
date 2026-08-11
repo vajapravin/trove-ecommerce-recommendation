@@ -176,9 +176,10 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Trove",
         description="Agentic e-commerce recommendation platform",
-        version="0.2.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
+
 
     # Static files
     static_dir = os.path.join(os.path.dirname(__file__), "static")
