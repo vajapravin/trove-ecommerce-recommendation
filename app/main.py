@@ -142,7 +142,7 @@ def _bootstrap() -> None:
             logger.info("Seeded admin user %s", settings.ADMIN_EMAIL)
 
         # Starter catalog (via dual_write so Chroma is populated too)
-        if settings.SEED_CATALOG and db.query(Product).count() == 0:
+        if settings.SEED_CATALOG:
             import json
             catalog_file = os.path.join(os.path.dirname(__file__), "starter_catalog.json")
             items = []
@@ -156,12 +156,32 @@ def _bootstrap() -> None:
             if not items:
                 items = STARTER_CATALOG
 
-            from app.services import dual_write
-            try:
-                dual_write.bulk_create_products(db, items)
-                logger.info("Seeded %d products into SQLite & Chroma vector store", len(items))
-            except Exception as exc:  # pragma: no cover — best effort
-                logger.exception("Catalog seed failed: %s", exc)
+            current_count = db.query(Product).count()
+            if current_count < len(items):
+                from app.services import dual_write
+                try:
+                    existing_titles = {p.title for p in db.query(Product.title).all()}
+                    missing_items = [item for item in items if item["title"] not in existing_titles]
+                    if missing_items:
+                        dual_write.bulk_create_products(db, missing_items)
+                        logger.info("Seeded %d new products into catalog (total now %d)", len(missing_items), db.query(Product).count())
+
+                    # Attach image_url to existing products missing an image
+                    no_img_prods = db.query(Product).filter(Product.image_url == None).all()  # noqa: E711
+                    if no_img_prods:
+                        title_to_item = {item["title"]: item for item in items}
+                        updated_count = 0
+                        for p in no_img_prods:
+                            match_item = title_to_item.get(p.title)
+                            if match_item and match_item.get("image_url"):
+                                p.image_url = match_item["image_url"]
+                                updated_count += 1
+                        if updated_count > 0:
+                            db.commit()
+                            logger.info("Updated %d existing products with image URLs", updated_count)
+                except Exception as exc:  # pragma: no cover — best effort
+                    logger.exception("Catalog seed/sync failed: %s", exc)
+
 
 
 

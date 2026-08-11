@@ -49,8 +49,26 @@
             <span class="muted small">View →</span>
           </div>
         </a>
-      {% endfor %}
     </div>
+
+    {% if total_pages > 1 %}
+      <div class="row-between align-center pagination" style="margin-top: 32px; padding: 12px 0;">
+        {% if page > 1 %}
+          <a class="button secondary" href="/catalog?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if level %}&level={{ level }}{% endif %}">← Previous</a>
+        {% else %}
+          <span class="button secondary disabled" style="opacity: 0.5; pointer-events: none;">← Previous</span>
+        {% endif %}
+
+        <span class="muted small">Page {{ page }} of {{ total_pages }} ({{ total_products }} products)</span>
+
+        {% if page < total_pages %}
+          <a class="button secondary" href="/catalog?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if level %}&level={{ level }}{% endif %}">Next →</a>
+        {% else %}
+          <span class="button secondary disabled" style="opacity: 0.5; pointer-events: none;">Next →</span>
+        {% endif %}
+      </div>
+    {% endif %}
+
 
   {% else %}
     <div class="empty-state">

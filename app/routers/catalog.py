@@ -26,24 +26,20 @@ def catalog(
     q: Optional[str] = Query(None, description="Search query"),
     category: Optional[str] = Query(None),
     level: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
-    """List products.
-
-    * If ``q`` is present, do a semantic search via Chroma.
-    * Otherwise SQL-list with optional category/level filters.
-    * Level filter is validated against ``VALID_LEVELS`` — anything else is
-      silently ignored so a stale URL doesn't 400.
-    """
+    """List products with pagination and search/filtering."""
     if level and level not in VALID_LEVELS:
         level = None
 
+    per_page = 40
+    offset = (page - 1) * per_page
     products: list[Product] = []
+    total_products = 0
 
     if q:
-        # Semantic search via Chroma with metadata filtering.
-        # Chroma's `where` accepts one clause; combine with $and for multi-field.
         where: dict = {}
         clauses = []
         if category:
@@ -56,12 +52,14 @@ def catalog(
             where = {"$and": clauses}
 
         try:
-            hits = vector_store.query_products(q, n_results=20, where=where or None)
+            hits = vector_store.query_products(q, n_results=100, where=where or None)
         except Exception:
             hits = []
 
         if hits:
-            ids = [h["product_id"] for h in hits]
+            total_products = len(hits)
+            page_hits = hits[offset:offset + per_page]
+            ids = [h["product_id"] for h in page_hits]
             found = {
                 p.id: p
                 for p in db.query(Product)
@@ -75,12 +73,15 @@ def catalog(
             query = query.filter(Product.category == category)
         if level:
             query = query.filter(Product.level == level)
-        products = query.order_by(Product.created_at.desc()).limit(60).all()
+        total_products = query.count()
+        products = query.order_by(Product.created_at.desc()).offset(offset).limit(per_page).all()
 
     categories = [
         row[0]
         for row in db.query(Product.category).distinct().order_by(Product.category).all()
     ]
+
+    total_pages = max(1, (total_products + per_page - 1) // per_page)
 
     return templates.TemplateResponse(
         request,
@@ -93,8 +94,12 @@ def catalog(
             "level": level or "",
             "categories": categories,
             "levels": ["beginner", "intermediate", "advanced"],
+            "page": page,
+            "total_pages": total_pages,
+            "total_products": total_products,
         },
     )
+
 
 
 @router.get("/products/{product_id}")
