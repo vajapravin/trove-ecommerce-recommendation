@@ -211,10 +211,22 @@ button:hover, .button:hover { opacity: 0.92; }
 }
 .product-detail-hero-img {
   width: 100%;
-  max-height: 320px;
+  max-height: 340px;
   object-fit: cover;
   border-radius: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   border: 1px solid #e7e5e4;
 }
+.product-gallery { margin-bottom: 24px; }
+.product-gallery-thumbs {
+  display: flex; gap: 10px; margin-top: 8px; overflow-x: auto; padding-bottom: 6px;
+}
+.gallery-thumb {
+  width: 72px; height: 72px; object-fit: cover; border-radius: 8px;
+  border: 2px solid #e7e5e4; cursor: pointer; opacity: 0.75; transition: all 0.15s ease;
+}
+.gallery-thumb:hover, .gallery-thumb.active {
+  opacity: 1; border-color: #4338ca; box-shadow: 0 2px 8px rgba(67, 56, 202, 0.25);
+}
+
 

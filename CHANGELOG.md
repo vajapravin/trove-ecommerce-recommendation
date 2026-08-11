@@ -9,7 +9,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 
 - `app/starter_catalog.json`: preloaded catalog dataset containing 1,020 products with real category-matched Unsplash image URLs across 12 tech domains.
 - `app/services/dual_write.py` & `app/vector_store.py`: `bulk_create_products` and `bulk_upsert_products` for fast (<3s) bulk catalog preloading on first app startup across any machine.
-- `app/data/fix_product_images.py`: script generating 100% unique, topic-appropriate image URLs for all 1,028 products across SQLite database and `starter_catalog.json`.
+- `app/data/scrape_temu_catalog.py`: migration script deactivating old products and seeding 3,500 active products across 35 Temu categories.
+- `app/models.py` & `app/services/dual_write.py`: `images_json` column and `Product.images` property for storing and retrieving 4+ distinct product photos per item.
+- Interactive multi-image thumbnail gallery component (`product.html`, `style.css`).
+
 
 
 

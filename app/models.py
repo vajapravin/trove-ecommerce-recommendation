@@ -62,6 +62,7 @@ class Product(Base):
     level: Mapped[str] = mapped_column(String(20), default="beginner", nullable=False)  # beginner/intermediate/advanced
     price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    images_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of image URLs
     tags: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # comma-separated
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
@@ -70,6 +71,21 @@ class Product(Base):
     )
 
     events: Mapped[list["Event"]] = relationship(back_populates="product")
+
+    @property
+    def images(self) -> list[str]:
+        """Return list of all image URLs for this product."""
+        if not self.images_json:
+            return [self.image_url] if self.image_url else []
+        try:
+            import json
+            parsed = json.loads(self.images_json)
+            if isinstance(parsed, list) and parsed:
+                return parsed
+        except Exception:
+            pass
+        return [self.image_url] if self.image_url else []
+
 
 
 # ---------------------------------------------------------------------------

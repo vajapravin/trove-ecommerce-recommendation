@@ -53,8 +53,19 @@ def bulk_create_products(db: Session, items: list[dict]) -> list[Product]:
     """Bulk create multiple products in SQLite and Chroma atomically."""
     if not items:
         return []
-    products = [Product(**item) for item in items]
-    db.add_all(products)
+    import json
+    prod_objects = []
+    for item in items:
+        item_copy = dict(item)
+        if "images" in item_copy and isinstance(item_copy["images"], list):
+            imgs = item_copy.pop("images")
+            if "images_json" not in item_copy:
+                item_copy["images_json"] = json.dumps(imgs)
+            if ("image_url" not in item_copy or not item_copy["image_url"]) and imgs:
+                item_copy["image_url"] = imgs[0]
+        prod_objects.append(Product(**item_copy))
+
+    db.add_all(prod_objects)
     db.flush()
 
     vector_items = [
@@ -67,7 +78,7 @@ def bulk_create_products(db: Session, items: list[dict]) -> list[Product]:
             "price": p.price,
             "tags": p.tags,
         }
-        for p in products
+        for p in prod_objects
     ]
 
     try:
@@ -77,7 +88,8 @@ def bulk_create_products(db: Session, items: list[dict]) -> list[Product]:
         raise
 
     db.commit()
-    return products
+    return prod_objects
+
 
 
 

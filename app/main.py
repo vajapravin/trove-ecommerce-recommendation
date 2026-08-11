@@ -141,8 +141,19 @@ def _bootstrap() -> None:
             db.commit()
             logger.info("Seeded admin user %s", settings.ADMIN_EMAIL)
 
+        # Ensure images_json column exists in SQLite table
+        from app.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE products ADD COLUMN images_json TEXT;"))
+                conn.commit()
+            except Exception:
+                pass
+
         # Starter catalog (via dual_write so Chroma is populated too)
         if settings.SEED_CATALOG:
+
             import json
             catalog_file = os.path.join(os.path.dirname(__file__), "starter_catalog.json")
             items = []
