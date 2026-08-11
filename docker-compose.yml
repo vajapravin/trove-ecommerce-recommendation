@@ -1,0 +1,15 @@
+services:
+  trove:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trove_app
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
