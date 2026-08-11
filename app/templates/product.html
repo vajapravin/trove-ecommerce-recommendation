@@ -3,6 +3,9 @@
 {% block content %}
 <article class="product-detail" data-product-page data-product-id="{{ product.id }}">
   <a class="back-link" href="/catalog">← Back to catalog</a>
+  {% if product.image_url %}
+    <img class="product-detail-hero-img" src="{{ product.image_url }}" alt="{{ product.title }}">
+  {% endif %}
   <div class="badge">{{ product.level }}</div>
   <h1>{{ product.title }}</h1>
   <p class="muted">{{ product.category }} · ${{ '%.0f' % product.price }}</p>
@@ -28,6 +31,11 @@
       <a class="product-card" href="/products/{{ p.id }}"
          data-product-id="{{ p.id }}"
          data-track-click="related-of-{{ product.id }}">
+        {% if p.image_url %}
+          <div class="product-card-thumb">
+            <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy">
+          </div>
+        {% endif %}
         <div class="badge">{{ p.level }}</div>
         <h3>{{ p.title }}</h3>
         <p class="muted small">{{ p.category }}</p>

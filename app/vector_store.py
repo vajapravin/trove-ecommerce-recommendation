@@ -97,6 +97,40 @@ def upsert_product(
     )
 
 
+def bulk_upsert_products(items: List[Dict[str, Any]]) -> None:
+    """Batch insert/replace multiple products into the vector store efficiently."""
+    if not items:
+        return
+    ids = [str(item["product_id"]) for item in items]
+    documents = [
+        _product_document(
+            item["title"],
+            item["description"],
+            item["category"],
+            item["level"],
+            item.get("tags"),
+        )
+        for item in items
+    ]
+    metadatas = [
+        {
+            "product_id": item["product_id"],
+            "title": item["title"],
+            "category": item["category"],
+            "level": item["level"],
+            "price": float(item["price"]),
+            "tags": item.get("tags") or "",
+        }
+        for item in items
+    ]
+    get_products_collection().upsert(
+        ids=ids,
+        documents=documents,
+        metadatas=metadatas,
+    )
+
+
+
 def delete_product(product_id: int) -> None:
     get_products_collection().delete(ids=[str(product_id)])
 

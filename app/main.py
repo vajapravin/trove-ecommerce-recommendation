@@ -143,20 +143,26 @@ def _bootstrap() -> None:
 
         # Starter catalog (via dual_write so Chroma is populated too)
         if settings.SEED_CATALOG and db.query(Product).count() == 0:
-            # We deliberately import inside the function to avoid a startup-time
-            # dependency on Mesh: reindexing hits the embeddings API. If MESH_API_KEY
-            # isn't set yet, we log and skip.
-            if not settings.MESH_API_KEY:
-                logger.warning("MESH_API_KEY not set — skipping catalog seed. "
-                               "Set it in .env and restart, or add products via the admin UI.")
-                return
+            import json
+            catalog_file = os.path.join(os.path.dirname(__file__), "starter_catalog.json")
+            items = []
+            if os.path.exists(catalog_file):
+                try:
+                    with open(catalog_file, "r", encoding="utf-8") as f:
+                        items = json.load(f)
+                except Exception as exc:
+                    logger.warning("Failed loading starter_catalog.json: %s", exc)
+
+            if not items:
+                items = STARTER_CATALOG
+
             from app.services import dual_write
             try:
-                for item in STARTER_CATALOG:
-                    dual_write.create_product(db, **item)
-                logger.info("Seeded %d starter products", len(STARTER_CATALOG))
+                dual_write.bulk_create_products(db, items)
+                logger.info("Seeded %d products into SQLite & Chroma vector store", len(items))
             except Exception as exc:  # pragma: no cover — best effort
                 logger.exception("Catalog seed failed: %s", exc)
+
 
 
 @asynccontextmanager

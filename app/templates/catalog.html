@@ -35,6 +35,11 @@
     <div class="product-grid">
       {% for p in products %}
         <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}">
+          {% if p.image_url %}
+            <div class="product-card-thumb">
+              <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy">
+            </div>
+          {% endif %}
           <div class="badge">{{ p.level }}</div>
           <h3>{{ p.title }}</h3>
           <p class="muted small">{{ p.category }}</p>
@@ -46,6 +51,7 @@
         </a>
       {% endfor %}
     </div>
+
   {% else %}
     <div class="empty-state">
       {% if q %}

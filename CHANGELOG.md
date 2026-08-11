@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 
 ## [Unreleased]
 
+### Added
+
+- `app/starter_catalog.json`: preloaded catalog dataset containing 1,020 products with real category-matched Unsplash image URLs across 12 tech domains.
+- `app/services/dual_write.py` & `app/vector_store.py`: `bulk_create_products` and `bulk_upsert_products` for fast (<3s) bulk catalog preloading on first app startup across any machine.
+- Product card & detail page image UI rendering (`catalog.html`, `product.html`, `style.css`).
+
+
 ## [1.0.0] - 2026-08-11
 
 ### Added

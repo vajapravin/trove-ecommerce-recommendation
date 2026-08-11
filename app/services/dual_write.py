@@ -49,6 +49,38 @@ def create_product(db: Session, **fields) -> Product:
     return product
 
 
+def bulk_create_products(db: Session, items: list[dict]) -> list[Product]:
+    """Bulk create multiple products in SQLite and Chroma atomically."""
+    if not items:
+        return []
+    products = [Product(**item) for item in items]
+    db.add_all(products)
+    db.flush()
+
+    vector_items = [
+        {
+            "product_id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "category": p.category,
+            "level": p.level,
+            "price": p.price,
+            "tags": p.tags,
+        }
+        for p in products
+    ]
+
+    try:
+        vector_store.bulk_upsert_products(vector_items)
+    except Exception:
+        db.rollback()
+        raise
+
+    db.commit()
+    return products
+
+
+
 def update_product(db: Session, product: Product, **fields) -> Product:
     """Patch a Product and re-upsert it into Chroma."""
     for key, value in fields.items():
