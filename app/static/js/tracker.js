@@ -178,11 +178,91 @@
   }
 
   // -----------------------------------------------------------------------
+  // Live Signal UI Updates & Polling
+  // -----------------------------------------------------------------------
+  async function fetchLiveSignal() {
+    try {
+      const resp = await fetch("/events/live-signal");
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      // 1. Update top bar status text
+      const statusTextEl = document.getElementById("agentLiveStatusText");
+      if (statusTextEl && data.ai_signal_summary) {
+        statusTextEl.textContent = data.ai_signal_summary;
+      }
+
+      // 2. Update "Your Signal" panel if present on product detail screen
+      const summaryTextEl = document.getElementById("signalSummaryText");
+      if (summaryTextEl && data.ai_signal_summary) {
+        summaryTextEl.textContent = data.ai_signal_summary;
+      }
+
+      const badgeEl = document.getElementById("signalEngagementBadge");
+      if (badgeEl && data.engagement_level) {
+        badgeEl.textContent = data.engagement_level;
+      }
+
+      // Render category affinity progress bars
+      const affinityBarsEl = document.getElementById("signalAffinityBars");
+      if (affinityBarsEl && data.top_categories && data.top_categories.length > 0) {
+        affinityBarsEl.innerHTML = data.top_categories.map(tc => `
+          <div class="affinity-item">
+            <div class="affinity-meta">
+              <span>${escapeHtml(tc.category)}</span>
+              <span class="affinity-pct">${tc.percentage}%</span>
+            </div>
+            <div class="affinity-bar">
+              <div class="affinity-fill" style="width: ${tc.percentage}%;"></div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      // Render search query chips
+      const chipsEl = document.getElementById("signalSearchChips");
+      if (chipsEl) {
+        if (data.recent_searches && data.recent_searches.length > 0) {
+          chipsEl.innerHTML = data.recent_searches.map(q => `
+            <span class="signal-chip">"${escapeHtml(q)}"</span>
+          `).join("");
+        } else {
+          chipsEl.innerHTML = '<span class="signal-chip muted-chip">No recent search terms</span>';
+        }
+      }
+
+      // Render latest observation feed log
+      const feedListEl = document.getElementById("signalFeedList");
+      if (feedListEl && data.latest_events && data.latest_events.length > 0) {
+        feedListEl.innerHTML = data.latest_events.map(ev => `
+          <div class="signal-feed-item">
+            <span class="feed-dot"></span>
+            <span class="feed-text">${escapeHtml(ev.label)}</span>
+            <span class="feed-time">${escapeHtml(ev.time)}</span>
+          </div>
+        `).join("");
+      }
+    } catch (_err) {
+      // Ignore background signal errors
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // -----------------------------------------------------------------------
   // Public tiny API in case a template wants to fire a custom event
   // -----------------------------------------------------------------------
   window.Trove = window.Trove || {};
   window.Trove.track = enqueue;
   window.Trove.flush = function () { flush(false); };
+  window.Trove.fetchLiveSignal = fetchLiveSignal;
 
   // -----------------------------------------------------------------------
   // Boot
@@ -193,6 +273,8 @@
     trackClicks();
     trackDwell();
     wireUnloadFlush();
+    fetchLiveSignal();
+    setInterval(fetchLiveSignal, 6000);
   }
 
   if (document.readyState === "loading") {
@@ -201,3 +283,4 @@
     start();
   }
 })();
+

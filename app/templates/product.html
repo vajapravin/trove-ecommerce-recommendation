@@ -1,38 +1,102 @@
 {% extends "base.html" %}
 {% block title %}{{ product.title }} · Trove{% endblock %}
 {% block content %}
-<article class="product-detail" data-product-page data-product-id="{{ product.id }}">
-  <a class="back-link" href="/catalog">← Back to catalog</a>
-  
-  {% if product.images %}
-    <div class="product-gallery">
-      <img id="mainHeroImg" class="product-detail-hero-img" src="{{ product.images[0] }}" alt="{{ product.title }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
-      {% if product.images|length > 1 %}
-        <div class="product-gallery-thumbs">
-          {% for img_url in product.images %}
-            <img class="gallery-thumb {% if loop.first %}active{% endif %}" src="{{ img_url }}" alt="Product view {{ loop.index }}" onclick="document.getElementById('mainHeroImg').src='{{ img_url }}'; document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active')); this.classList.add('active');" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-  {% endif %}
+<a class="back-link" href="/catalog">← Back to catalog</a>
 
-  <div class="badge">{{ product.level }}</div>
-  <h1>{{ product.title }}</h1>
-  <p class="muted">{{ product.category }} · ${{ '%.2f' % product.price }}</p>
-  <p class="lead">{{ product.description }}</p>
-  {% if product.tags %}
-    <div class="tags">
-      {% for t in product.tags.split(',') %}
-        <span class="tag">{{ t.strip() }}</span>
-      {% endfor %}
+<div class="product-detail-layout">
+  <!-- Left Column: Main Product Detail Card -->
+  <article class="product-detail product-main-card" data-product-page data-product-id="{{ product.id }}">
+    {% if product.images %}
+      <div class="product-gallery">
+        <img id="mainHeroImg" class="product-detail-hero-img" src="{{ product.images[0] }}" alt="{{ product.title }}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
+        {% if product.images|length > 1 %}
+          <div class="product-gallery-thumbs">
+            {% for img_url in product.images %}
+              <img class="gallery-thumb {% if loop.first %}active{% endif %}" src="{{ img_url }}" alt="Product view {{ loop.index }}" onclick="document.getElementById('mainHeroImg').src='{{ img_url }}'; document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active')); this.classList.add('active');" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="badge">{{ product.level }}</div>
+    <h1>{{ product.title }}</h1>
+    <p class="muted">{{ product.category }} · ${{ '%.2f' % product.price }}</p>
+    <p class="lead">{{ product.description }}</p>
+    {% if product.tags %}
+      <div class="tags">
+        {% for t in product.tags.split(',') %}
+          <span class="tag">{{ t.strip() }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="cta-row">
+      <button class="primary" data-track-click="cta-enroll" data-product-id="{{ product.id }}">Add to Cart</button>
+      <a href="/recommendations" class="button">See recommendations</a>
     </div>
-  {% endif %}
-  <div class="cta-row">
-    <button class="primary" data-track-click="cta-enroll" data-product-id="{{ product.id }}">Add to Cart</button>
-    <a href="/recommendations" class="button">See recommendations</a>
-  </div>
-</article>
+  </article>
+
+  <!-- Right Column: "Your Signal" Section -->
+  <aside class="your-signal-card" id="yourSignalPanel">
+    <div class="signal-header">
+      <div class="signal-header-title">
+        <span class="live-pulse-dot amber"></span>
+        <h2>Your Signal</h2>
+      </div>
+      <span class="signal-badge" id="signalEngagementBadge">Live</span>
+    </div>
+
+    <!-- AI Intent Summary -->
+    <div class="signal-section">
+      <div class="signal-label">AGENT INTENT ANALYSIS</div>
+      <div class="signal-summary-box" id="signalSummaryText">
+        Observing your exploration of {{ product.category }} & related products...
+      </div>
+    </div>
+
+    <!-- Category Affinity Bars -->
+    <div class="signal-section">
+      <div class="signal-label">CATEGORY AFFINITY</div>
+      <div id="signalAffinityBars" class="signal-affinity-list">
+        <div class="affinity-item">
+          <div class="affinity-meta">
+            <span>{{ product.category }}</span>
+            <span class="affinity-pct">100%</span>
+          </div>
+          <div class="affinity-bar">
+            <div class="affinity-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Searches -->
+    <div class="signal-section" id="signalSearchSection">
+      <div class="signal-label">RECENT SEARCH INTENT</div>
+      <div id="signalSearchChips" class="signal-chips-wrap">
+        <span class="signal-chip muted-chip">No recent search terms</span>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Feed Log -->
+    <div class="signal-section">
+      <div class="signal-label">RECENT OBSERVATIONS</div>
+      <div id="signalFeedList" class="signal-feed">
+        <div class="signal-feed-item">
+          <span class="feed-dot"></span>
+          <span class="feed-text">Viewing {{ product.title }}</span>
+          <span class="feed-time">Just now</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendation CTA -->
+    <div class="signal-footer">
+      <a href="/recommendations" class="button cta full-width">View Personalized Recommendations →</a>
+    </div>
+  </aside>
+</div>
+
 
 {% if related %}
 <section class="related">

@@ -109,3 +109,103 @@ async def ingest(
         db.commit()
 
     return JSONResponse({"received": len(rows)})
+
+
+@router.get("/live-signal")
+def get_live_signal(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(current_user),
+):
+    """Return live shopper signal analysis for current user or guest session."""
+    sid = request.cookies.get("trove_sid") or request.query_params.get("session_id")
+
+    events: list[Event] = []
+    if user:
+        events = (
+            db.query(Event)
+            .filter((Event.user_id == user.id) | (Event.session_id == sid if sid else False))
+            .order_by(Event.created_at.desc())
+            .limit(40)
+            .all()
+        )
+    elif sid:
+        events = (
+            db.query(Event)
+            .filter(Event.session_id == sid)
+            .order_by(Event.created_at.desc())
+            .limit(40)
+            .all()
+        )
+    else:
+        events = db.query(Event).order_by(Event.created_at.desc()).limit(20).all()
+
+    category_counts: dict[str, int] = {}
+    search_queries: list[str] = []
+    latest_event_logs: list[dict[str, str]] = []
+
+    for ev in events:
+        payload = {}
+        if ev.payload_json:
+            try:
+                payload = json.loads(ev.payload_json)
+            except Exception:
+                pass
+
+        cat = payload.get("category")
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        if ev.event_type == "search":
+            q = payload.get("q")
+            if q and q not in search_queries:
+                search_queries.append(q)
+
+        label = ev.event_type.replace("_", " ").title()
+        if ev.event_type == "search" and payload.get("q"):
+            label = f"Search: '{payload['q']}'"
+        elif cat:
+            label = f"{label} in {cat}"
+        elif payload.get("label"):
+            label = f"{label} ({payload['label']})"
+
+        time_str = ev.created_at.strftime("%H:%M:%S") if ev.created_at else "Just now"
+        latest_event_logs.append({
+            "type": ev.event_type,
+            "label": label,
+            "time": time_str
+        })
+
+    total_cats = sum(category_counts.values()) or 1
+    top_categories = [
+        {
+            "category": c,
+            "count": cnt,
+            "percentage": min(100, int((cnt / total_cats) * 100))
+        }
+        for c, cnt in sorted(category_counts.items(), key=lambda x: x[1], reverse=True)[:4]
+    ]
+
+    total_events = len(events)
+    engagement_level = (
+        "High Engagement" if total_events >= 8 else ("Moderate Interest" if total_events >= 3 else "Starting Journey")
+    )
+
+    if top_categories:
+        cats_str = " & ".join([tc["category"] for tc in top_categories[:2]])
+        if search_queries:
+            ai_summary = f"Observing active shopper signal in {cats_str} with explicit search interest for '{search_queries[0]}'."
+        else:
+            ai_summary = f"Strong category affinity detected in {cats_str}. Synthesizing intent for real-time recommendation updates."
+    else:
+        ai_summary = "Initializing agent live observer. Browse products or search to build your real-time signal fingerprint."
+
+    return JSONResponse({
+        "total_events": total_events,
+        "engagement_level": engagement_level,
+        "top_categories": top_categories,
+        "recent_searches": search_queries[:5],
+        "latest_events": latest_event_logs[:5],
+        "ai_signal_summary": ai_summary,
+    })
+

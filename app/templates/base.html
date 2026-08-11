@@ -10,6 +10,15 @@
   data-user-id="{% if user %}{{ user.id }}{% endif %}"
   data-user-role="{% if user %}{{ user.role }}{% endif %}"
 >
+  <div id="agentLiveBar" class="agent-live-bar">
+    <div class="agent-live-content">
+      <span class="live-pulse-dot"></span>
+      <span class="agent-live-badge">AGENT LIVE</span>
+      <span class="agent-live-title">Reading your signal —</span>
+      <span id="agentLiveStatusText" class="agent-live-status">Observing catalog exploration & intent...</span>
+    </div>
+  </div>
+
   <nav class="topbar">
     <a class="brand" href="/">Trove</a>
     <div class="nav-links">
