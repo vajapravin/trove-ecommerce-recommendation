@@ -78,8 +78,13 @@ def catalog(
 
     categories = [
         row[0]
-        for row in db.query(Product.category).distinct().order_by(Product.category).all()
+        for row in db.query(Product.category)
+        .filter(Product.is_active == True)  # noqa: E712
+        .distinct()
+        .order_by(Product.category)
+        .all()
     ]
+
 
     total_pages = max(1, (total_products + per_page - 1) // per_page)
 

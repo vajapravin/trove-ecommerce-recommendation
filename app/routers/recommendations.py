@@ -32,8 +32,14 @@ def view_recommendations(
     if latest and latest.product_ids_json:
         try:
             product_ids = json.loads(latest.product_ids_json)
-            found = {p.id: p for p in db.query(Product).filter(Product.id.in_(product_ids)).all()}
+            found = {
+                p.id: p
+                for p in db.query(Product)
+                .filter(Product.id.in_(product_ids), Product.is_active == True)  # noqa: E712
+                .all()
+            }
             products = [found[i] for i in product_ids if i in found]
+
         except (json.JSONDecodeError, TypeError):
             products = []
 
