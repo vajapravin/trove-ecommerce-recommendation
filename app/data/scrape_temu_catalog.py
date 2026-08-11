@@ -60,16 +60,30 @@ TEMU_CATEGORIES = [
     "Furniture",
 ]
 
-# Verified high-res Unsplash photo IDs for diverse physical product photography
-UNSPLASH_PHOTO_POOL = [
-    "1522335789203-aabd1fc54bc9", "1526170375885-4d8ecf77b99f", "1542291026-7eec264c27ff",
-    "1505740420928-5e560c06d30e", "1583394838336-acd977736f90", "1572635196237-14b3f281503f",
-    "1546868871-7041f2a55e12", "1584917865442-de89df76afd3", "1608231387042-66d1773070a5",
-    "1585386959984-a4155224a1ad", "1593998066526-65fcabfb0b7e", "1560343090-f0409e92791a",
-    "1523275335684-37898b6baf30", "1503602642458-232111445657", "1586495777744-4413f21062fa",
-    "1567401893414-76b7b1e5a7a5", "1616486338812-3dadae4b4ace", "1512496015851-a90fb38ba796",
-    "1598033129183-c4f50c736f1d", "1517841905240-472988babdf9", "1511556532299-8f662fc26c06"
-]
+# Verified high-res Unsplash photo IDs mapped to product domain categories
+CATEGORY_PHOTO_POOLS = {
+    "Beauty Personal Care": ["1522335789203-aabd1fc54bc9", "1598440947619-2c35fc9aa908", "1571781926291-c477ebfd024b", "1556228720-195a672e8a03"],
+    "Women's Clothing": ["1515886657613-9f3515b0c78f", "1496747611176-843222e1e57c", "1509631179647-0177331693ae", "1485230895905-ec40ba36b9bc"],
+    "Home Kitchen": ["1556911220-e15b29be8c8f", "1584308666744-24d5c474f2ae", "1583847268964-b28dc8f51f92", "1507089947368-19c1da9775ae"],
+    "Men's Clothing": ["1617137984095-74e4e5e3613f", "1617137968427-85924c800a22", "1490114538077-0a7f8cb49891", "1507679799987-c73779587ccf"],
+    "Women's Shoes": ["1543163521-1bf539c55dd2", "1515347619252-60a4bf4fff4f", "1595950653106-6c9ebd614d3a", "1560343090-f0409e92791a"],
+    "Men's Shoes": ["1542291026-7eec264c27ff", "1525966222134-fcfa99b8ae77", "1560769629-975ec94e6a86", "1595950653106-6c9ebd614d3a"],
+    "Electronics": ["1505740420928-5e560c06d30e", "1546868871-7041f2a55e12", "1583394838336-acd977736f90", "1572635196237-14b3f281503f"],
+    "Sports Outdoors": ["1517838277536-f5f99be501cd", "1584735935682-2f2b69dff9d2", "1571019613454-1cb2f99b2d8b", "1541534741688-6078c6bfb5c5"],
+    "Toys Games": ["1566576912321-d58ddd7a6088", "1515488042361-ee00e0ddd4e4", "1596461404969-9ae70f2830c1", "1587654780291-39c9404d746b"],
+    "Pet Supplies": ["1543466835-00a7907e9de1", "1583511655857-d19b40a7a54e", "1537151608828-ea2b11777ee8", "1514888286974-6c03e2ca1dba"],
+    "Jewellery Accessories": ["1515562141207-7a88fb7ce338", "1535632066927-ab7c9ab60908", "1599643478518-a784e5dc4c8f", "1522335789203-aabd1fc54bc9"],
+    "Automotive": ["1511919884226-fd3cad34687c", "1503376780353-7e6692767b70", "1552519507-da3b142c6e3d", "1492144534655-ae79c964c9d7"],
+    "Musical Instruments": ["1511671782779-c97d3d27a1d4", "1514525253161-7a46d19cd819", "1520523839897-bd0b52f945a0", "1465847899084-d164df4dedc6"],
+    "Bags Luggage": ["1553062407-98eeb64c6a62", "1584917865442-de89df76afd3", "1548036328-c9fa89d128fa", "1608231387042-66d1773070a5"],
+    "Food Grocery": ["1540420773420-3366772f4999", "1498837167922-ddd27525d352", "1504674900247-0877df9cc836", "1567620832903-9fc6debc209f"],
+    "Furniture": ["1555041469-a586c61ea9bc", "1586023492125-27b2c045efd7", "1616486338812-3dadae4b4ace", "1538688525198-9b88f6f53126"],
+    "Tools Home Improvement": ["1504148455328-c376907d081c", "1581092160607-ee22621dd758", "1572981779307-38b8cabb2407", "1530124566582-a618bc2615dc"],
+    "Patio, Lawn Garden": ["1585320806297-9794b3e4eeae", "1416879595882-3373a0480b5b", "1516253593875-bd7ba052fbc5", "1501004318641-b39e6451bec6"],
+    "Office School Supplies": ["1585386959984-a4155224a1ad", "1513542789411-b6a5d4f31634", "1456513080510-7bf3a84b82f8", "1586075010923-2dd4570fb338"],
+    "Mobile Phones Accessories": ["1580910051074-3eb694886505", "1565849904461-04a58ad377e0", "1511707171634-5f897ff02aa9", "1541807084-5c52b6b3adef"]
+}
+DEFAULT_PHOTO_POOL = ["1505740420928-5e560c06d30e", "1542291026-7eec264c27ff", "1523275335684-37898b6baf30", "1503602642458-232111445657"]
 
 
 def slugify(text: str) -> str:
@@ -79,6 +93,9 @@ def slugify(text: str) -> str:
 def generate_temu_product(category: str, index: int) -> dict:
     """Generate a single Temu product with multiple high-res product photos."""
     clean_cat = category.replace("'", "").replace(",", "").replace(" ", "-").lower()
+
+    # Select domain photo pool matching category
+    photo_pool = CATEGORY_PHOTO_POOLS.get(category) or DEFAULT_PHOTO_POOL
 
     # Product titles template by category domain
     title_templates = {
@@ -148,11 +165,11 @@ def generate_temu_product(category: str, index: int) -> dict:
     price = round(random.uniform(2.99, 79.99), 2)
     tags = f"{clean_cat},temu,deal,top-rated,fast-shipping"
 
-    # Multi-image generation: 4 distinct image URLs per product
+    # Multi-image generation: 4 domain-matched image URLs per product
     images = []
-    for img_idx in range(1, 5):
-        photo_id = UNSPLASH_PHOTO_POOL[(index * 7 + img_idx * 3) % len(UNSPLASH_PHOTO_POOL)]
-        img_url = f"https://images.unsplash.com/photo-{photo_id}?w=600&auto=format&fit=crop&sig={index}_{img_idx}"
+    for img_idx in range(len(photo_pool)):
+        photo_id = photo_pool[(index + img_idx) % len(photo_pool)]
+        img_url = f"https://images.unsplash.com/photo-{photo_id}?w=600&auto=format&fit=crop"
         images.append(img_url)
 
     description = (
@@ -160,6 +177,7 @@ def generate_temu_product(category: str, index: int) -> dict:
         f"stylish design, and top customer ratings. Package includes product unit and user manual. "
         f"Fast Temu logistics delivery guaranteed."
     )
+
 
     return {
         "title": title,
