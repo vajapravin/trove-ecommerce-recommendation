@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 
 ## [Unreleased]
 
+### Added
+
+- `app/services/activity_summary.py`: user activity aggregation service (`summarize_user_activity`) returning structured `UserActivitySummary` with search queries, product interaction vectors, dwell metrics, and SHA256 event activity fingerprint.
+
+
 ## [0.3.0] - 2026-08-03
 
 ### Added
