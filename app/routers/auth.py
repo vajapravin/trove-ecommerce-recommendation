@@ -10,12 +10,24 @@ from app.auth import create_session_token, hash_password, verify_password
 from app.config import get_settings
 from app.database import get_db
 from app.deps import current_user
-from app.models import User
+from app.models import Event, User
 
 
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
 settings = get_settings()
+
+
+def _associate_session_events(db: Session, request: Request, user_id: int):
+    sid = request.cookies.get("trove_sid")
+    if sid:
+        try:
+            db.query(Event).filter(Event.session_id == sid, Event.user_id == None).update(  # noqa: E711
+                {"user_id": user_id}, synchronize_session=False
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +55,8 @@ def login_submit(
             {"error": "Invalid email or password.", "user": None},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+
+    _associate_session_events(db, request, user.id)
 
     token = create_session_token(user.id)
     response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
@@ -98,6 +112,8 @@ def register_submit(
     db.commit()
     db.refresh(user)
 
+    _associate_session_events(db, request, user.id)
+
     token = create_session_token(user.id)
     response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
@@ -108,6 +124,7 @@ def register_submit(
         samesite="lax",
     )
     return response
+
 
 
 # ---------------------------------------------------------------------------

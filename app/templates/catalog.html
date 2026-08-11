@@ -14,22 +14,29 @@
   <div class="chip-strip">
     <div class="chip-group">
       <a class="chip {% if not category %}active{% endif %}"
-         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if level %}level={{ level }}{% endif %}">All</a>
+         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if level %}level={{ level }}{% endif %}"
+         data-track-click="category-chip-all">All</a>
       {% for c in categories %}
         <a class="chip {% if c == category %}active{% endif %}"
-           href="/catalog?category={{ c }}{% if q %}&q={{ q }}{% endif %}{% if level %}&level={{ level }}{% endif %}">{{ c }}</a>
+           href="/catalog?category={{ c }}{% if q %}&q={{ q }}{% endif %}{% if level %}&level={{ level }}{% endif %}"
+           data-track-click="category-chip"
+           data-category="{{ c }}">{{ c }}</a>
       {% endfor %}
     </div>
     <div class="chip-group level-group">
       <span class="chip-label">Level:</span>
       <a class="chip small {% if not level %}active{% endif %}"
-         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if category %}category={{ category }}{% endif %}">Any</a>
+         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if category %}category={{ category }}{% endif %}"
+         data-track-click="level-chip-any">Any</a>
       {% for l in levels %}
         <a class="chip small {% if l == level %}active{% endif %}"
-           href="/catalog?level={{ l }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}">{{ l }}</a>
+           href="/catalog?level={{ l }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}"
+           data-track-click="level-chip"
+           data-level="{{ l }}">{{ l }}</a>
       {% endfor %}
     </div>
   </div>
+
 
   {% if products %}
     <div class="product-grid">

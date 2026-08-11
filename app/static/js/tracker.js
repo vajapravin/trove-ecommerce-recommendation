@@ -36,6 +36,7 @@
         sid = "s_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
         sessionStorage.setItem("trove_sid", sid);
       }
+      document.cookie = "trove_sid=" + sid + "; path=/; max-age=86400; SameSite=Lax";
       return sid;
     } catch (_e) {
       return null;
@@ -129,10 +130,17 @@
     document.addEventListener("click", function (e) {
       const el = e.target && e.target.closest ? e.target.closest("[data-track-click]") : null;
       if (el) {
+        const payload = { label: el.getAttribute("data-track-click") };
+        if (el.hasAttribute("data-category")) {
+          payload.category = el.getAttribute("data-category");
+        }
+        if (el.hasAttribute("data-level")) {
+          payload.level = el.getAttribute("data-level");
+        }
         enqueue({
           event_type: "click",
           product_id: parseInt(el.getAttribute("data-product-id"), 10) || null,
-          payload: { label: el.getAttribute("data-track-click") },
+          payload: payload,
         });
         return;
       }
@@ -147,6 +155,7 @@
       }
     }, { passive: true });
   }
+
 
   function trackDwell() {
     // Emit a "dwell" tick every 10 seconds the tab is visible.
