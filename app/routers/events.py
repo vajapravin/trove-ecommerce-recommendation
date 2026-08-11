@@ -27,7 +27,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import current_user
-from app.models import Event, User
+from app.models import Event, Product, Recommendation, User
+
 
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -200,6 +201,46 @@ def get_live_signal(
     else:
         ai_summary = "Initializing agent live observer. Browse products or search to build your real-time signal fingerprint."
 
+    # Fetch candidate recommended products for the user/session
+    reco_prods: list[Product] = []
+    if user:
+        latest_reco = db.query(Recommendation).filter(Recommendation.user_id == user.id).order_by(Recommendation.id.desc()).first()
+        if latest_reco and latest_reco.product_ids_json:
+            try:
+                pids = json.loads(latest_reco.product_ids_json)
+                if pids:
+                    found_dict = {
+                        p.id: p
+                        for p in db.query(Product).filter(Product.id.in_(pids), Product.is_active == True).all()  # noqa: E712
+                    }
+                    reco_prods = [found_dict[pid] for pid in pids if pid in found_dict]
+            except Exception:
+                pass
+
+    if not reco_prods and top_categories:
+        top_cat_name = top_categories[0]["category"]
+        reco_prods = (
+            db.query(Product)
+            .filter(Product.category == top_cat_name, Product.is_active == True)  # noqa: E712
+            .limit(3)
+            .all()
+        )
+
+    if not reco_prods:
+        reco_prods = db.query(Product).filter(Product.is_active == True).order_by(Product.id.desc()).limit(3).all()
+
+    recommended_products_payload = [
+        {
+            "id": p.id,
+            "title": p.title,
+            "price": p.price,
+            "image_url": p.image_url,
+            "category": p.category,
+            "level": p.level,
+        }
+        for p in reco_prods[:3]
+    ]
+
     return JSONResponse({
         "total_events": total_events,
         "engagement_level": engagement_level,
@@ -207,5 +248,7 @@ def get_live_signal(
         "recent_searches": search_queries[:5],
         "latest_events": latest_event_logs[:5],
         "ai_signal_summary": ai_summary,
+        "recommended_products": recommended_products_payload,
     })
+
 

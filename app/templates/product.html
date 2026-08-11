@@ -90,12 +90,19 @@
       </div>
     </div>
 
-    <!-- Recommendation CTA -->
-    <div class="signal-footer">
-      <a href="/recommendations" class="button cta full-width">View Personalized Recommendations →</a>
+    <!-- Live Recommended Products Section (Replaces button) -->
+    <div class="signal-section signal-reco-section">
+      <div class="signal-label">RECOMMENDED FOR YOU</div>
+      <div id="signalRecoContainer" class="signal-reco-list">
+        <div class="signal-reco-loading muted small">Loading personalized picks...</div>
+      </div>
+      <div class="signal-reco-narrative-link">
+        <a href="/recommendations" class="muted small text-link">See full narrative →</a>
+      </div>
     </div>
   </aside>
 </div>
+
 
 
 {% if related %}

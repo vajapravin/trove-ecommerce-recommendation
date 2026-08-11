@@ -506,6 +506,99 @@ button:hover, .button:hover { opacity: 0.92; }
   }
 }
 
+/* ---------- Catalog Layout (2-Column) ---------- */
+.catalog-layout {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+.catalog-main-col {
+  flex: 1 1 68%;
+  min-width: 0;
+}
+
+/* ---------- Live Recommended Products inside Your Signal Card ---------- */
+.signal-reco-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #292524;
+}
+.signal-reco-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.signal-reco-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #292524;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  padding: 8px;
+  text-decoration: none;
+  color: #f4f4f5;
+  transition: all 0.2s ease;
+}
+.signal-reco-card:hover {
+  border-color: #f59e0b;
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+.signal-reco-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #18181b;
+}
+.signal-reco-info {
+  flex: 1;
+  min-width: 0;
+}
+.signal-reco-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fafaf9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.signal-reco-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.73rem;
+  color: #a1a1aa;
+}
+.signal-reco-price {
+  color: #fbbf24;
+  font-weight: 700;
+}
+.signal-reco-narrative-link {
+  margin-top: 8px;
+  text-align: right;
+}
+.signal-reco-narrative-link a {
+  color: #a1a1aa;
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+.signal-reco-narrative-link a:hover {
+  color: #fbbf24;
+  text-decoration: underline;
+}
+@media (max-width: 960px) {
+  .catalog-layout {
+    flex-direction: column;
+  }
+}
+
+
 
 
 

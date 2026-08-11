@@ -242,10 +242,32 @@
           </div>
         `).join("");
       }
+
+      // Render live recommended products
+      const recoContainerEl = document.getElementById("signalRecoContainer");
+      if (recoContainerEl) {
+        if (data.recommended_products && data.recommended_products.length > 0) {
+          recoContainerEl.innerHTML = data.recommended_products.map(p => `
+            <a href="/products/${p.id}" class="signal-reco-card" target="_blank" rel="noopener noreferrer">
+              ${p.image_url ? `<img src="${p.image_url}" alt="${escapeHtml(p.title)}" class="signal-reco-thumb" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">` : ''}
+              <div class="signal-reco-info">
+                <div class="signal-reco-title">${escapeHtml(p.title)}</div>
+                <div class="signal-reco-meta">
+                  <span class="signal-reco-price">$${p.price.toFixed(2)}</span>
+                  <span>${escapeHtml(p.category || '')}</span>
+                </div>
+              </div>
+            </a>
+          `).join("");
+        } else {
+          recoContainerEl.innerHTML = '<div class="signal-reco-loading muted small">No recommendations yet. Browse to generate picks!</div>';
+        }
+      }
     } catch (_err) {
       // Ignore background signal errors
     }
   }
+
 
   function escapeHtml(str) {
     if (!str) return "";

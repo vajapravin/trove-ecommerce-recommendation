@@ -10,90 +10,161 @@
     </form>
   </header>
 
-  {# Chip strip: categories + levels. Selecting a chip preserves the current query. #}
-  <div class="chip-strip">
-    <div class="chip-group">
-      <a class="chip {% if not category %}active{% endif %}"
-         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if level %}level={{ level }}{% endif %}"
-         data-track-click="category-chip-all">All</a>
-      {% for c in categories %}
-        <a class="chip {% if c == category %}active{% endif %}"
-           href="/catalog?category={{ c }}{% if q %}&q={{ q }}{% endif %}{% if level %}&level={{ level }}{% endif %}"
-           data-track-click="category-chip"
-           data-category="{{ c }}">{{ c }}</a>
-      {% endfor %}
-    </div>
-    <div class="chip-group level-group">
-      <span class="chip-label">Level:</span>
-      <a class="chip small {% if not level %}active{% endif %}"
-         href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if category %}category={{ category }}{% endif %}"
-         data-track-click="level-chip-any">Any</a>
-      {% for l in levels %}
-        <a class="chip small {% if l == level %}active{% endif %}"
-           href="/catalog?level={{ l }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}"
-           data-track-click="level-chip"
-           data-level="{{ l }}">{{ l }}</a>
-      {% endfor %}
-    </div>
-  </div>
-
-
-  {% if products %}
-    <div class="product-grid">
-      {% for p in products %}
-        <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}" target="_blank" rel="noopener noreferrer">
-          {% if p.image_url %}
-            <div class="product-card-thumb">
-              <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
-            </div>
-          {% endif %}
-
-          <div class="badge">{{ p.level }}</div>
-          <h3>{{ p.title }}</h3>
-          <p class="muted small">{{ p.category }}</p>
-          <p class="clip-3">{{ p.description }}</p>
-          <div class="row-between">
-            <span class="price">${{ '%.0f' % p.price }}</span>
-            <span class="muted small">View →</span>
-          </div>
-        </a>
-      {% endfor %}
-    </div>
-
-    {% if total_pages > 1 %}
-      <div class="load-more-container">
-        <button id="loadMoreBtn"
-                class="load-more-button"
-                data-current-page="{{ page }}"
-                data-total-pages="{{ total_pages }}"
-                data-q="{{ q }}"
-                data-category="{{ category }}"
-                data-level="{{ level }}">
-          Load More Products
-        </button>
+  <div class="catalog-layout">
+    <!-- Left Column: Main Catalog Filters & Product Grid -->
+    <div class="catalog-main-col">
+      {# Chip strip: categories + levels. Selecting a chip preserves the current query. #}
+      <div class="chip-strip">
+        <div class="chip-group">
+          <a class="chip {% if not category %}active{% endif %}"
+             href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if level %}level={{ level }}{% endif %}"
+             data-track-click="category-chip-all">All</a>
+          {% for c in categories %}
+            <a class="chip {% if c == category %}active{% endif %}"
+               href="/catalog?category={{ c }}{% if q %}&q={{ q }}{% endif %}{% if level %}&level={{ level }}{% endif %}"
+               data-track-click="category-chip"
+               data-category="{{ c }}">{{ c }}</a>
+          {% endfor %}
+        </div>
+        <div class="chip-group level-group">
+          <span class="chip-label">Level:</span>
+          <a class="chip small {% if not level %}active{% endif %}"
+             href="/catalog?{% if q %}q={{ q }}&{% endif %}{% if category %}category={{ category }}{% endif %}"
+             data-track-click="level-chip-any">Any</a>
+          {% for l in levels %}
+            <a class="chip small {% if l == level %}active{% endif %}"
+               href="/catalog?level={{ l }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}"
+               data-track-click="level-chip"
+               data-level="{{ l }}">{{ l }}</a>
+          {% endfor %}
+        </div>
       </div>
-    {% endif %}
 
-  {% else %}
-    <div class="empty-state">
-      {% if q %}
-        <h2>No matches for "{{ q }}"</h2>
-        <p class="muted">
-          Try a broader term
-          {% if category or level %}
-            — or <a href="/catalog?q={{ q }}">clear the filters</a>.
-          {% else %}.{% endif %}
-        </p>
-      {% elif category or level %}
-        <h2>Nothing matches those filters</h2>
-        <p class="muted"><a href="/catalog">Show all products</a></p>
+      {% if products %}
+        <div class="product-grid">
+          {% for p in products %}
+            <a class="product-card" href="/products/{{ p.id }}" data-product-id="{{ p.id }}" target="_blank" rel="noopener noreferrer">
+              {% if p.image_url %}
+                <div class="product-card-thumb">
+                  <img src="{{ p.image_url }}" alt="{{ p.title }}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
+                </div>
+              {% endif %}
+
+              <div class="badge">{{ p.level }}</div>
+              <h3>{{ p.title }}</h3>
+              <p class="muted small">{{ p.category }}</p>
+              <p class="clip-3">{{ p.description }}</p>
+              <div class="row-between">
+                <span class="price">${{ '%.0f' % p.price }}</span>
+                <span class="muted small">View →</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+
+        {% if total_pages > 1 %}
+          <div class="load-more-container">
+            <button id="loadMoreBtn"
+                    class="load-more-button"
+                    data-current-page="{{ page }}"
+                    data-total-pages="{{ total_pages }}"
+                    data-q="{{ q }}"
+                    data-category="{{ category }}"
+                    data-level="{{ level }}">
+              Load More Products
+            </button>
+          </div>
+        {% endif %}
+
       {% else %}
-        <h2>Nothing here yet</h2>
-        <p class="muted">The catalog is empty. An admin can add products from the admin panel.</p>
+        <div class="empty-state">
+          {% if q %}
+            <h2>No matches for "{{ q }}"</h2>
+            <p class="muted">
+              Try a broader term
+              {% if category or level %}
+                — or <a href="/catalog?q={{ q }}">clear the filters</a>.
+              {% else %}.{% endif %}
+            </p>
+          {% elif category or level %}
+            <h2>Nothing matches those filters</h2>
+            <p class="muted"><a href="/catalog">Show all products</a></p>
+          {% else %}
+            <h2>Nothing here yet</h2>
+            <p class="muted">The catalog is empty. An admin can add products from the admin panel.</p>
+          {% endif %}
+        </div>
       {% endif %}
     </div>
-  {% endif %}
+
+    <!-- Right Column: "Your Signal" Card -->
+    <aside class="your-signal-card" id="yourSignalPanel">
+      <div class="signal-header">
+        <div class="signal-header-title">
+          <span class="live-pulse-dot amber"></span>
+          <h2>Your Signal</h2>
+        </div>
+        <span class="signal-badge" id="signalEngagementBadge">Live</span>
+      </div>
+
+      <!-- AI Intent Summary -->
+      <div class="signal-section">
+        <div class="signal-label">AGENT INTENT ANALYSIS</div>
+        <div class="signal-summary-box" id="signalSummaryText">
+          Observing catalog exploration & category affinity...
+        </div>
+      </div>
+
+      <!-- Category Affinity Bars -->
+      <div class="signal-section">
+        <div class="signal-label">CATEGORY AFFINITY</div>
+        <div id="signalAffinityBars" class="signal-affinity-list">
+          <div class="affinity-item">
+            <div class="affinity-meta">
+              <span>Exploring</span>
+              <span class="affinity-pct">--</span>
+            </div>
+            <div class="affinity-bar">
+              <div class="affinity-fill" style="width: 50%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Searches -->
+      <div class="signal-section" id="signalSearchSection">
+        <div class="signal-label">RECENT SEARCH INTENT</div>
+        <div id="signalSearchChips" class="signal-chips-wrap">
+          <span class="signal-chip muted-chip">No recent search terms</span>
+        </div>
+      </div>
+
+      <!-- Live Telemetry Feed Log -->
+      <div class="signal-section">
+        <div class="signal-label">RECENT OBSERVATIONS</div>
+        <div id="signalFeedList" class="signal-feed">
+          <div class="signal-feed-item">
+            <span class="feed-dot"></span>
+            <span class="feed-text">Exploring catalog</span>
+            <span class="feed-time">Just now</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Recommended Products Section (Replaces button) -->
+      <div class="signal-section signal-reco-section">
+        <div class="signal-label">RECOMMENDED FOR YOU</div>
+        <div id="signalRecoContainer" class="signal-reco-list">
+          <div class="signal-reco-loading muted small">Loading personalized picks...</div>
+        </div>
+        <div class="signal-reco-narrative-link">
+          <a href="/recommendations" class="muted small text-link">See full narrative →</a>
+        </div>
+      </div>
+    </aside>
+  </div>
 </section>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
