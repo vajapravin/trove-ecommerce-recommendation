@@ -229,4 +229,43 @@ button:hover, .button:hover { opacity: 0.92; }
   opacity: 1; border-color: #4338ca; box-shadow: 0 2px 8px rgba(67, 56, 202, 0.25);
 }
 
+/* ---------- Load More Button ---------- */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 40px 0 20px 0;
+  text-align: center;
+}
+.load-more-button {
+  background: linear-gradient(135deg, #ff4747 0%, #e60000 100%);
+  color: #ffffff;
+  border: none;
+  padding: 14px 42px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(230, 0, 0, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+.load-more-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e60000 0%, #cc0000 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 0, 0, 0.4);
+}
+.load-more-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+.load-more-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.end-catalog-msg {
+  font-size: 0.95rem;
+  color: #78716c;
+  margin-top: 24px;
+}
+
+
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -27,10 +28,11 @@ def catalog(
     category: Optional[str] = Query(None),
     level: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
+    format: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     user: User | None = Depends(current_user),
 ):
-    """List products with pagination and search/filtering."""
+    """List products with pagination, load more, and search/filtering."""
     if level and level not in VALID_LEVELS:
         level = None
 
@@ -85,8 +87,30 @@ def catalog(
         .all()
     ]
 
-
     total_pages = max(1, (total_products + per_page - 1) // per_page)
+
+    if format == "json" or request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JSONResponse(
+            {
+                "products": [
+                    {
+                        "id": p.id,
+                        "title": p.title,
+                        "description": p.description,
+                        "category": p.category,
+                        "level": p.level,
+                        "price": p.price,
+                        "image_url": p.image_url,
+                        "tags": p.tags,
+                    }
+                    for p in products
+                ],
+                "page": page,
+                "total_pages": total_pages,
+                "has_more": page < total_pages,
+                "total_products": total_products,
+            }
+        )
 
     return templates.TemplateResponse(
         request,
@@ -104,6 +128,7 @@ def catalog(
             "total_products": total_products,
         },
     )
+
 
 
 

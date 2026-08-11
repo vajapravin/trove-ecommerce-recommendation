@@ -54,20 +54,16 @@
     </div>
 
     {% if total_pages > 1 %}
-      <div class="row-between align-center pagination" style="margin-top: 32px; padding: 12px 0;">
-        {% if page > 1 %}
-          <a class="button secondary" href="/catalog?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if level %}&level={{ level }}{% endif %}">← Previous</a>
-        {% else %}
-          <span class="button secondary disabled" style="opacity: 0.5; pointer-events: none;">← Previous</span>
-        {% endif %}
-
-        <span class="muted small">Page {{ page }} of {{ total_pages }} ({{ total_products }} products)</span>
-
-        {% if page < total_pages %}
-          <a class="button secondary" href="/catalog?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if level %}&level={{ level }}{% endif %}">Next →</a>
-        {% else %}
-          <span class="button secondary disabled" style="opacity: 0.5; pointer-events: none;">Next →</span>
-        {% endif %}
+      <div class="load-more-container">
+        <button id="loadMoreBtn"
+                class="load-more-button"
+                data-current-page="{{ page }}"
+                data-total-pages="{{ total_pages }}"
+                data-q="{{ q }}"
+                data-category="{{ category }}"
+                data-level="{{ level }}">
+          Load More Products
+        </button>
       </div>
     {% endif %}
 
@@ -91,4 +87,92 @@
     </div>
   {% endif %}
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const productGrid = document.querySelector('.product-grid');
+
+  if (!loadMoreBtn || !productGrid) return;
+
+  loadMoreBtn.addEventListener('click', async () => {
+    let currentPage = parseInt(loadMoreBtn.getAttribute('data-current-page') || '1', 10);
+    const totalPages = parseInt(loadMoreBtn.getAttribute('data-total-pages') || '1', 10);
+    const q = loadMoreBtn.getAttribute('data-q') || '';
+    const category = loadMoreBtn.getAttribute('data-category') || '';
+    const level = loadMoreBtn.getAttribute('data-level') || '';
+
+    const nextPage = currentPage + 1;
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading products...';
+
+    const params = new URLSearchParams({
+      page: nextPage,
+      format: 'json'
+    });
+    if (q) params.set('q', q);
+    if (category) params.set('category', category);
+    if (level) params.set('level', level);
+
+    try {
+      const resp = await fetch(`/catalog?${params.toString()}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (data.products && data.products.length > 0) {
+        data.products.forEach(p => {
+          const card = document.createElement('a');
+          card.className = 'product-card';
+          card.href = `/products/${p.id}`;
+          card.setAttribute('data-product-id', p.id);
+
+          const thumbHtml = p.image_url ? `
+            <div class="product-card-thumb">
+              <img src="${p.image_url}" alt="${escapeHtml(p.title)}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=600&auto=format&fit=crop';">
+            </div>
+          ` : '';
+
+          card.innerHTML = `
+            ${thumbHtml}
+            <div class="badge">${escapeHtml(p.level || 'beginner')}</div>
+            <h3>${escapeHtml(p.title)}</h3>
+            <p class="muted small">${escapeHtml(p.category)}</p>
+            <p class="clip-3">${escapeHtml(p.description || '')}</p>
+            <div class="row-between">
+              <span class="price">$${Math.round(p.price)}</span>
+              <span class="muted small">View →</span>
+            </div>
+          `;
+          productGrid.appendChild(card);
+        });
+
+        loadMoreBtn.setAttribute('data-current-page', nextPage);
+
+        if (nextPage >= data.total_pages || !data.has_more) {
+          loadMoreBtn.parentElement.innerHTML = '<p class="muted end-catalog-msg">You\'ve reached the end of the catalog.</p>';
+        } else {
+          loadMoreBtn.disabled = false;
+          loadMoreBtn.textContent = 'Load More Products';
+        }
+      } else {
+        loadMoreBtn.parentElement.innerHTML = '<p class="muted end-catalog-msg">You\'ve reached the end of the catalog.</p>';
+      }
+    } catch (err) {
+      console.error('Failed to load more products:', err);
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = 'Retry Loading';
+    }
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+});
+</script>
 {% endblock %}
+
