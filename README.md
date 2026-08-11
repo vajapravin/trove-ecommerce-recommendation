@@ -1,5 +1,7 @@
 # Trove — Agentic Recommendation Platform
 
+> **Live demo:** https://trove-ecommerce-recommendation.vajapravin.me/
+
 *Every catalog has treasure. We find yours.*
 
 A commerce-style platform whose backend watches how each shopper browses, understands their interests, and generates personalized, persuasive recommendations grounded in the real catalog via semantic retrieval.
