@@ -11,7 +11,7 @@ from collections import Counter
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -80,10 +80,21 @@ def summarize_user_activity(
 
     # Calculate new events since last recommendation
     if latest_reco and latest_reco.created_at:
-        new_events = [e for e in events_chrono if e.created_at > latest_reco.created_at]
+        reco_dt = latest_reco.created_at
+        if reco_dt.tzinfo is None:
+            reco_dt = reco_dt.replace(tzinfo=timezone.utc)
+
+        def _to_utc(dt):
+            return dt.replace(tzinfo=timezone.utc) if dt and dt.tzinfo is None else dt
+
+        new_events = [
+            e for e in events_chrono
+            if e.created_at and _to_utc(e.created_at) > reco_dt
+        ]
         new_events_count = len(new_events)
     else:
         new_events_count = len(events_chrono)
+
 
     event_ids = [e.id for e in events_chrono]
     fingerprint = compute_activity_fingerprint(event_ids)
@@ -114,11 +125,12 @@ def summarize_user_activity(
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        if etype == "search":
+        if etype in ("search", "search_catalog"):
             q = payload.get("query") or payload.get("q")
             if q and q not in search_queries:
                 search_queries.append(q)
                 summary_lines.append(f"- Searched catalog for: '{q}'")
+
 
         elif etype in ("view_product", "click"):
             pid = event.product_id or payload.get("product_id")

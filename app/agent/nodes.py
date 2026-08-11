@@ -35,8 +35,9 @@ def analyze_activity_node(state: AgentState) -> Dict[str, Any]:
     viewed_titles = summary_dict.get("viewed_product_titles", [])
 
     default_query = search_queries[0] if search_queries else (
-        " ".join(viewed_titles[:2]) if viewed_titles else "software engineering courses"
+        " ".join(viewed_titles[:2]) if viewed_titles else "trending e-commerce products"
     )
+
     default_cat = categories[0] if categories else None
     default_level = levels[0] if levels else None
 
@@ -91,15 +92,16 @@ def decide_retrieve_node(state: AgentState) -> Dict[str, Any]:
     """Node 2: Decision node ensuring valid query parameters exist."""
     query = state.get("extracted_query", "").strip()
     if not query:
-        query = "best recommended courses"
+        query = "best recommended products"
     return {"extracted_query": query}
 
 
 def retrieve_node(state: AgentState) -> Dict[str, Any]:
     """Node 3: Semantic search via Chroma vector store returning top-15 shortlist candidates."""
-    query = state.get("extracted_query", "courses")
+    query = state.get("extracted_query", "products")
     cat = state.get("category_filter")
     lvl = state.get("level_filter")
+
 
     conditions: List[Dict[str, Any]] = []
     if cat:
@@ -233,9 +235,10 @@ def generate_node(state: AgentState) -> Dict[str, Any]:
 
     fallback_picks = candidate_ids[:3]
     fallback_narrative = (
-        f"Based on your recent interest in {reranked[0]['category']} and related topics, "
-        f"we have selected top courses tailored for your journey. Explore these recommendations below to level up your skills!"
+        f"Based on your recent interest in {reranked[0]['category']} and related items, "
+        f"we have selected top products tailored for your shopping interests. Explore these recommendations below!"
     )
+
 
     if not settings.MESH_API_KEY:
         logger.info("MESH_API_KEY not set; returning heuristic grounded recommendation")
