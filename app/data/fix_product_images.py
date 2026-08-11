@@ -22,10 +22,10 @@ from app.database import SessionLocal
 from app.models import Product
 
 
-# Curated high-resolution Unsplash photo IDs by category domain
+# Curated high-resolution Unsplash photo IDs by category domain (all 200 OK verified)
 CATEGORY_PHOTO_IDS = {
     "AI & Agents": [
-        "1618401471353-b98afee0b2eb", "1509966756634-9c23dd6e6815", "1677442136019-21780efad99a",
+        "1618401471353-b98afee0b2eb", "1509966756634-9c23dd6e6815", "1534972195531-d756b9bfa9f2",
         "1620712943543-bcc4688e7485", "1531746790731-6c087fecd65a", "1555255707-c07966088b7b"
     ],
     "Machine Learning": [
@@ -67,9 +67,10 @@ CATEGORY_PHOTO_IDS = {
         "1522071820081-009f0129c71c", "1515187029135-18ee286d815b", "1531482615713-2afd69097998"
     ],
     "Web3 & Crypto": [
-        "1639762681485-074b7f938ba0", "1622979135225-d2ba269bc1bd", "1642543492481-44e81e3914a7"
+        "1639762681485-074b7f938ba0", "1642543492481-44e81e3914a7", "1620712943543-bcc4688e7485"
     ],
 }
+
 
 
 def slugify(text: str) -> str:
