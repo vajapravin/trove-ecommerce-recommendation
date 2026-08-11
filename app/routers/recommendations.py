@@ -1,19 +1,19 @@
 """User-facing recommendations view + refresh endpoint.
 
-Day 1: fetch the latest stored recommendation. Day 4 adds the agent trigger.
+Renders user recommendations and triggers the LangGraph agent state machine.
 """
 from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, responses, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.agent.runner import run_recommendation_agent
 from app.database import get_db
 from app.deps import require_user
 from app.models import Product, Recommendation, User
-
 
 router = APIRouter(tags=["recommendations"])
 templates = Jinja2Templates(directory="app/templates")
@@ -49,4 +49,18 @@ def view_recommendations(
             "recommendation": latest,
             "products": products,
         },
+    )
+
+
+@router.post("/recommendations/refresh")
+def refresh_recommendations(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Trigger the LangGraph recommendation agent manually and redirect back to view."""
+    run_recommendation_agent(db, user.id, source="web")
+    return responses.RedirectResponse(
+        url="/recommendations",
+        status_code=status.HTTP_303_SEE_OTHER,
     )

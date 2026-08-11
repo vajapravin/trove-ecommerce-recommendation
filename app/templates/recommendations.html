@@ -2,18 +2,23 @@
 {% block title %}For you · Trove{% endblock %}
 {% block content %}
 <section class="recommendations">
-  <h1>For you</h1>
+  <div class="row-between align-center page-header">
+    <h1>For you</h1>
+    <form action="/recommendations/refresh" method="post" style="margin: 0;">
+      <button type="submit" class="button secondary">⚡ Refresh Recommendations</button>
+    </form>
+  </div>
   {% if recommendation %}
     <div class="reco-card">
       <div class="reco-narrative">
         {{ recommendation.narrative | replace('\n', '<br>') | safe }}
       </div>
-      <div class="reco-updated muted small">
+      <div class="reco-updated muted small" style="margin-top: 12px;">
         Updated {{ recommendation.created_at.strftime('%b %d, %Y at %H:%M UTC') }}
         · source: {{ recommendation.source }}
       </div>
     </div>
-    <div class="product-grid">
+    <div class="product-grid" style="margin-top: 24px;">
       {% for p in products %}
         <a class="product-card" href="/products/{{ p.id }}"
            data-product-id="{{ p.id }}"
@@ -36,7 +41,12 @@
         Browse the catalog for a bit — as soon as you've explored a handful of courses,
         we'll craft a personalized recommendation for you.
       </p>
-      <a class="button primary" href="/catalog">Start browsing</a>
+      <div class="row-center gap-12" style="margin-top: 16px;">
+        <a class="button primary" href="/catalog">Start browsing</a>
+        <form action="/recommendations/refresh" method="post" style="display: inline;">
+          <button type="submit" class="button secondary">Generate Now</button>
+        </form>
+      </div>
     </div>
   {% endif %}
 </section>

@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versioning: [SemVer](
 ### Added
 
 - `app/services/activity_summary.py`: user activity aggregation service (`summarize_user_activity`) returning structured `UserActivitySummary` with search queries, product interaction vectors, dwell metrics, and SHA256 event activity fingerprint.
+- `app/agent/`: LangGraph recommendation engine workflow (`analyze_activity` → `decide_retrieve` → `retrieve` → `evaluate` → `refine` → `generate`) with grounded product picks and persistence to `recommendations` table.
+- `POST /recommendations/refresh`: manual recommendation trigger route and UI button.
+
 
 
 ## [0.3.0] - 2026-08-03
