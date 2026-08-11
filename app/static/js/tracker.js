@@ -75,7 +75,7 @@
       clearTimeout(flushTimer);
       flushTimer = null;
     }
-    if (queue.length === 0) return;
+    if (queue.length === 0) return Promise.resolve();
 
     const payload = JSON.stringify({ events: queue.splice(0, queue.length) });
 
@@ -84,20 +84,20 @@
       // Blob with type text/plain avoids preflight for beacon.
       try {
         navigator.sendBeacon(ENDPOINT, new Blob([payload], { type: "text/plain" }));
-        return;
+        return Promise.resolve();
       } catch (_e) { /* fall through to fetch */ }
     }
 
-    // Fire-and-forget fetch — keepalive lets small requests survive unload too.
+    // Return the fetch promise so callers can await the ingest round-trip.
     try {
-      fetch(ENDPOINT, {
+      return fetch(ENDPOINT, {
         method: "POST",
         body: payload,
         keepalive: true,
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
       }).catch(function () { /* silent */ });
-    } catch (_e) { /* silent */ }
+    } catch (_e) { return Promise.resolve(); }
   }
 
   // -----------------------------------------------------------------------
@@ -263,6 +263,25 @@
           recoContainerEl.innerHTML = '<div class="signal-reco-loading muted small">No recommendations yet. Browse to generate picks!</div>';
         }
       }
+
+      // Render recent recommendations history timeline
+      const recoHistoryEl = document.getElementById("signalRecoHistory");
+      if (recoHistoryEl) {
+        if (data.recent_recommendations && data.recent_recommendations.length > 0) {
+          recoHistoryEl.innerHTML = data.recent_recommendations.map(r => `
+            <a href="/recommendations" class="signal-history-item">
+              <div class="signal-history-top">
+                <span class="signal-history-source-badge ${r.source === 'scheduled' ? 'scheduled' : 'web'}">${escapeHtml(r.source)}</span>
+                <span class="signal-history-time">${escapeHtml(r.created_at)}</span>
+              </div>
+              <div class="signal-history-narrative">${escapeHtml(r.narrative_snippet)}</div>
+              <div class="signal-history-meta">${r.product_count} product${r.product_count !== 1 ? 's' : ''} recommended</div>
+            </a>
+          `).join("");
+        } else {
+          recoHistoryEl.innerHTML = '<div class="signal-reco-loading muted small">No recommendation history yet.</div>';
+        }
+      }
     } catch (_err) {
       // Ignore background signal errors
     }
@@ -289,12 +308,19 @@
   // -----------------------------------------------------------------------
   // Boot
   // -----------------------------------------------------------------------
-  function start() {
+  async function start() {
     trackPageView();
     trackSearchIfPresent();
     trackClicks();
     trackDwell();
     wireUnloadFlush();
+
+    // Flush queued events (page view, search) and wait for the server to
+    // ingest them BEFORE the first signal fetch.  This guarantees the
+    // live-signal response includes the current page's product category
+    // so recommendations are contextually correct on first paint.
+    try { await flush(false); } catch (_e) { /* proceed anyway */ }
+
     fetchLiveSignal();
     setInterval(fetchLiveSignal, 6000);
   }

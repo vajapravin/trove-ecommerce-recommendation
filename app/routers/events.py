@@ -145,6 +145,19 @@ def get_live_signal(
     search_queries: list[str] = []
     latest_event_logs: list[dict[str, str]] = []
 
+    # Bulk-resolve product_id → category so view_product events (which carry
+    # only a product_id, not a category in their payload) contribute to
+    # category affinity.  Single DB round-trip for all referenced products.
+    product_ids_in_events = {ev.product_id for ev in events if ev.product_id}
+    product_category_map: dict[int, str] = {}
+    if product_ids_in_events:
+        rows = (
+            db.query(Product.id, Product.category)
+            .filter(Product.id.in_(product_ids_in_events))
+            .all()
+        )
+        product_category_map = {pid: cat for pid, cat in rows}
+
     for ev in events:
         payload = {}
         if ev.payload_json:
@@ -153,9 +166,17 @@ def get_live_signal(
             except Exception:
                 pass
 
+        # Count category from payload (chip clicks, search filters)
         cat = payload.get("category")
         if cat:
             category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        # Also count category resolved from the product_id (product views,
+        # add-to-cart, etc.) — this is the main source for product pages.
+        if ev.product_id and ev.product_id in product_category_map:
+            resolved_cat = product_category_map[ev.product_id]
+            if resolved_cat and resolved_cat != cat:  # avoid double-counting
+                category_counts[resolved_cat] = category_counts.get(resolved_cat, 0) + 1
 
         if ev.event_type == "search":
             q = payload.get("q")
@@ -167,6 +188,8 @@ def get_live_signal(
             label = f"Search: '{payload['q']}'"
         elif cat:
             label = f"{label} in {cat}"
+        elif ev.product_id and ev.product_id in product_category_map:
+            label = f"{label} in {product_category_map[ev.product_id]}"
         elif payload.get("label"):
             label = f"{label} ({payload['label']})"
 
@@ -203,6 +226,7 @@ def get_live_signal(
 
     # Fetch candidate recommended products for the user/session
     reco_prods: list[Product] = []
+    recent_recos_list: list[Recommendation] = []
     if user:
         latest_reco = db.query(Recommendation).filter(Recommendation.user_id == user.id).order_by(Recommendation.id.desc()).first()
         if latest_reco and latest_reco.product_ids_json:
@@ -216,6 +240,24 @@ def get_live_signal(
                     reco_prods = [found_dict[pid] for pid in pids if pid in found_dict]
             except Exception:
                 pass
+
+        # If the user's current browsing category doesn't match any of the
+        # stored recommendation's product categories, discard them so the
+        # category-based fallback below can serve contextually relevant picks.
+        if reco_prods and top_categories:
+            current_top_cats = {tc["category"] for tc in top_categories}
+            reco_cats = {p.category for p in reco_prods}
+            if not current_top_cats & reco_cats:
+                reco_prods = []
+
+        # Fetch the 3 most recent recommendation runs for the history timeline
+        recent_recos_list = (
+            db.query(Recommendation)
+            .filter(Recommendation.user_id == user.id)
+            .order_by(Recommendation.created_at.desc())
+            .limit(3)
+            .all()
+        )
 
     if not reco_prods and top_categories:
         top_cat_name = top_categories[0]["category"]
@@ -241,6 +283,25 @@ def get_live_signal(
         for p in reco_prods[:3]
     ]
 
+    # Build recent recommendations history payload
+    recent_recommendations_payload = []
+    for reco in recent_recos_list:
+        narrative_snippet = (reco.narrative or "")[:120]
+        if len(reco.narrative or "") > 120:
+            narrative_snippet += "…"
+        product_count = 0
+        try:
+            product_count = len(json.loads(reco.product_ids_json or "[]"))
+        except Exception:
+            pass
+        recent_recommendations_payload.append({
+            "id": reco.id,
+            "narrative_snippet": narrative_snippet,
+            "source": reco.source,
+            "product_count": product_count,
+            "created_at": reco.created_at.strftime("%b %d, %H:%M") if reco.created_at else "",
+        })
+
     return JSONResponse({
         "total_events": total_events,
         "engagement_level": engagement_level,
@@ -249,6 +310,7 @@ def get_live_signal(
         "latest_events": latest_event_logs[:5],
         "ai_signal_summary": ai_summary,
         "recommended_products": recommended_products_payload,
+        "recent_recommendations": recent_recommendations_payload,
     })
 
 
