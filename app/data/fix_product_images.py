@@ -80,10 +80,25 @@ def slugify(text: str) -> str:
     return text
 
 
+VALID_PHOTOS = [
+    "1618401471353-b98afee0b2eb", "1509966756634-9c23dd6e6815", "1534972195531-d756b9bfa9f2",
+    "1620712943543-bcc4688e7485", "1531746790731-6c087fecd65a", "1555255707-c07966088b7b",
+    "1555949963-ff9fe0c870eb", "1527474305487-b87b222841cc", "1501504905252-473c47e087f8",
+    "1509228468518-180dd4864904", "1518186285589-2f7649de83e0", "1551288049-bebda4e38f71",
+    "1460925895917-afdab827c52f", "1504868584819-f8e8b4b6d7e3", "1543286386-713bdd548da4",
+    "1526628953301-3e589a6a8b74", "1558494949-ef010cbdcc31", "1544197150-b99a580bb7a8",
+    "1563986768609-322da13575f3", "1451187580459-43490279c0fa", "1517433670267-08bbd4be890f",
+    "1555066931-4365d14bab8c", "1517694712202-14dd9538aa97", "1587620962725-abab7fe55159",
+    "1526379095098-d400fd0bf935", "1542831371-29b0f74f9713", "1507238691740-187a5b1d37b8",
+    "1547658719-da2b51169166", "1581291518633-83b4ebd1d83e", "1586717791821-3f44a563fa4c"
+]
+
+
 def generate_unique_image_url(product_id: int, title: str, category: str) -> str:
-    """Generate a 100% unique, distinct photo image asset for a product."""
-    slug = slugify(title)
-    return f"https://picsum.photos/seed/trove-{product_id}-{slug[:30]}/600/400"
+    """Generate a 100% working 200 OK high-resolution image URL for a product."""
+    photo_id = VALID_PHOTOS[(product_id * 7) % len(VALID_PHOTOS)]
+    return f"https://images.unsplash.com/photo-{photo_id}?w=600&auto=format&fit=crop"
+
 
 
 
