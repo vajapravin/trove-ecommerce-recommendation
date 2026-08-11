@@ -49,6 +49,7 @@
             <span class="muted small">View →</span>
           </div>
         </a>
+      {% endfor %}
     </div>
 
     {% if total_pages > 1 %}
@@ -68,7 +69,6 @@
         {% endif %}
       </div>
     {% endif %}
-
 
   {% else %}
     <div class="empty-state">
