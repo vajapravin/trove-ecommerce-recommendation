@@ -1,118 +1,111 @@
-# Trove — Agentic Recommendation Platform
+# Trove — Agentic E-Commerce Recommendation Platform
 
-> **Live demo:** https://trove-ecommerce-recommendation.vajapravin.me/
+<div align="center">
 
-*Every catalog has treasure. We find yours.*
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white) ![LangGraph](https://img.shields.io/badge/LangGraph-333333?style=for-the-badge&logo=graphql&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlite&logoColor=white) ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge&logo=databricks&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-A commerce-style platform whose backend watches how each shopper browses, understands their interests, and generates personalized, persuasive recommendations grounded in the real catalog via semantic retrieval.
+**Live demo:** [trove-ecommerce-recommendation.vajapravin.me](https://trove-ecommerce-recommendation.vajapravin.me/)
+
+</div>
+
+A commerce-style platform whose backend watches how each shopper browses, understands their interests, and generates personalized, persuasive recommendations grounded in the real catalog via semantic retrieval. Built with Python, LangGraph, and FastAPI, this system uses a multi-node agent state machine to analyze behavioral signals, perform RAG-based retrieval against a Chroma vector store, and deliver LLM-ranked product picks — all without requiring a single explicit search from the user.
 
 Built for the **SmartReco Build Challenge 2026**.
 
----
+## 🏗 Architecture
 
-## What's built
+The application uses a graph-based agent architecture (via LangGraph) to deliver deterministic, cost-aware recommendations:
 
-- **FastAPI** web app with server-rendered Jinja2 templates
-- **Email/password auth** with signed session cookies; two roles (`user`, `admin`)
-- **Product catalog** with full admin CRUD (create, edit, delete)
-- **Dual-write** — every product write goes to SQLite *and* Chroma (vector DB) atomically, with rollback if Chroma fails
-- **Semantic search** — the `/catalog?q=...` route retrieves through Chroma with metadata filtering by category and level
-- **"You might also like"** — a zero-LLM semantic kNN strip on every product detail page
-- **Non-blocking behavioral tracking** — batched, throttled frontend queue that survives page unload via `sendBeacon`
-- **Activity summary service** — aggregates user behavior into structured signals and SHA256 activity fingerprints
-- **Admin health dashboard** at `/admin/mesh-health` — pings Mesh chat + embeddings and shows SQLite/Chroma sync status
-- **Agentic recommendation engine** built as a **LangGraph** state machine (`analyze_activity` → `decide_retrieve` → `retrieve` → `evaluate` → `refine` → `rerank` → `generate`)
-- **Trigger policy & fingerprint caching** — enforces `RECO_MIN_NEW_EVENTS` and `RECO_MIN_INTERVAL_MINUTES`, skipping LLM calls on fingerprint match for zero-cost repeat visits
-- **Scheduled daily digest** via **APScheduler** running proactive background recommendations and logging to `digest_logs` with admin view at `/admin/digests`
-- **Retrieval re-ranking** — two-stage candidate selection (top-15 shortlist → top-5 LLM re-rank)
-- **LangSmith observability tracing** — full span tree visibility across all agent graph nodes
+1. **Behavioral Tracking (`tracker.js`)**: A non-blocking frontend queue that batches user events (views, clicks, scrolls, dwell time) and flushes on 10 events, 5-second timeout, or page unload via `sendBeacon` — zero dropped events.
+2. **Trigger Policy (`policy.py`)**: Guards the agent graph behind a dual threshold: ≥ `RECO_MIN_NEW_EVENTS` new events *and* ≥ `RECO_MIN_INTERVAL_MINUTES` since the last run. SHA-256 activity fingerprinting skips LLM calls entirely on repeat visits.
+3. **Activity Analyzer Node**: Summarizes raw behavioral events into structured signals (top categories, engagement depth, price affinities) and extracts a semantic search query.
+4. **RAG Retrieval Node**: Queries the Chroma vector store with metadata filters (category, level) to produce a top-15 candidate shortlist from pre-computed product embeddings.
+5. **Evaluation & Refinement Nodes**: Validates shortlist quality against relevance thresholds; if below threshold, broadens query parameters and re-retrieves.
+6. **LLM Re-Rank Node**: Ranks the top-15 shortlist down to top-5 picks via the Mesh API, grounding selections in the user's behavioral context.
+7. **Narrative Generation Node**: Produces a persuasive, personalized recommendation narrative with product picks anchored to real Chroma catalog IDs.
 
----
+## ✨ Core Features
 
-## Architecture
+* **Dual-Write Consistency**: Every product write goes to SQLite *and* Chroma atomically, with rollback if Chroma fails — catalog and vector store are always in sync.
+* **Semantic Search**: The `/catalog?q=...` route retrieves products through Chroma with metadata filtering by category and level, powered by OpenAI embeddings.
+* **Zero-LLM "You Might Also Like"**: A semantic kNN strip on every product detail page that costs zero LLM tokens at runtime — Chroma does an in-memory vector search on pre-computed embeddings.
+* **Fingerprint Caching**: The agent hashes ordered recent activity into a SHA-256 fingerprint; if it matches the last stored recommendation, the entire LLM pipeline is skipped for zero-cost repeat visits.
+* **Scheduled Daily Digest**: APScheduler runs proactive background recommendations and logs to `digest_logs` with an admin view at `/admin/digests`.
+* **Two-Stage Retrieval Re-Ranking**: Top-15 shortlist → LLM-ranked to top-5, keeping agent prompts small and token costs low.
+* **LangSmith Observability**: Full span tree visibility across all agent graph nodes for debugging and performance monitoring.
+* **Admin Health Dashboard**: `/admin/mesh-health` pings Mesh chat + embeddings and shows SQLite/Chroma sync status in real time.
 
-```
-┌────────────────────┐        ┌────────────────────────────────────────────────────────┐
-│  Browser (Jinja2)  │        │                    FastAPI backend                     │
-│                    │        │                                                        │
-│  tracker.js queue  │──POST──▶  /events (batched ingest, non-blocking)                │
-│  sendBeacon on     │        │                                                        │
-│  unload            │        │  Trigger Check (Policy & Fingerprint Cache):           │
-│                    │        │    ├── Skip LLM if fingerprint matches / throttled     │
-│  /recommendations  │◀───────│    └── Run Agent (LangGraph):                          │
-└────────────────────┘        │          analyze → retrieve (Chroma) →                 │
-                              │          evaluate → refine → rerank → generate         │
-                              │                                                        │
-                              │  APScheduler ──▶ Daily digest job (mock delivery)      │
-                              └──────────┬───────────────────────┬─────────────────────┘
-                                         │                       │
-                                         ▼                       ▼
-                                  ┌─────────────┐         ┌──────────────┐
-                                  │   SQLite    │         │   Chroma     │
-                                  │ (via SQLA)  │         │ (embeddings) │
-                                  └─────────────┘         └──────────────┘
-                                         ▲                       ▲
-                                         └────── dual-write ─────┘
-                                              (products only)
+## ⚔ Tech Stack
 
-  All LLM + embedding calls flow through the Mesh API (OpenAI-compatible).
-```
+| Component | Technology |
+|---|---|
+| Framework | Python 3.12+, FastAPI |
+| Templating | Jinja2 (server-rendered) |
+| Agent Orchestration | LangGraph (StateGraph) |
+| LLM Provider | Mesh API (OpenAI-compatible) — GPT-4o-mini |
+| Embeddings | OpenAI `text-embedding-3-small` via Mesh |
+| Database | SQLite (via SQLAlchemy) |
+| Vector Store | ChromaDB |
+| Auth | bcrypt + signed-cookie sessions |
+| Scheduling | APScheduler |
+| Observability | LangSmith tracing |
+| Deployment | Docker Compose |
 
-### Key tables
-
-| Table              | Purpose                                                       |
-|--------------------|---------------------------------------------------------------|
-| `users`            | id, email, password_hash, role, created_at                    |
-| `products`         | id, title, description, category, level, price, image_url…    |
-| `events`           | id, user_id, session_id, event_type, product_id, payload_json |
-| `recommendations`  | id, user_id, narrative, product_ids_json, fingerprint, source |
-| `digest_logs`      | id, user_id, recommendation_id, subject, body, created_at     |
-
-### Efficiency choices
-
-- **Frontend tracker** flushes on: 10 events queued, 5 seconds elapsed, or page hide/unload (`visibilitychange` + `sendBeacon`). High-frequency events (scroll, dwell ticks) are throttled to at most 1/sec per type.
-- **Backend event ingest** does a bulk insert and returns immediately — no blocking work happens on the request path.
-- **Agent triggering** requires *both* ≥ `RECO_MIN_NEW_EVENTS` new events *and* ≥ `RECO_MIN_INTERVAL_MINUTES` since the last run for that user. The agent also hashes the ordered recent activity into a **fingerprint**; if it matches the last stored recommendation's fingerprint, the LLM is skipped entirely.
-- **"You might also like"** costs zero LLM tokens at runtime — Chroma retrieves the pre-computed embedding for the source product and does an in-memory vector search.
-- **Retrieval re-rank** happens on a *shortlist* (top-15 → LLM-ranked to top-5) so agent prompts stay small.
-
----
-
-## Setup & Running
+## 🛠 Quick Start
 
 ```bash
-# 1. Activate virtual environment
+# Clone the repository
+git clone https://github.com/vajapravin/trove-ecommerce-recommendation.git
+cd trove-ecommerce-recommendation
+
+# Create and activate virtual environment
+python -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\activate
 
-# 2. Install dependencies (if needed)
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure secrets
+# Set up environment variables
 cp .env.example .env
 # Edit .env — paste your MESH_API_KEY
 
-# 4. Run application
+# Run the application
 python run.py
 # Or:  uvicorn app.main:app --reload
 ```
 
-Then open <http://localhost:8000>.
+The app will be available at `http://localhost:8000`.
 
-### First-run bootstrap
+### First-Run Bootstrap
 
 On first boot the app creates the SQLite DB, seeds an admin account, and (if `SEED_CATALOG=true` and `MESH_API_KEY` is set) loads a starter catalog through the dual-write path — so both SQLite and Chroma are populated.
 
 Default admin: **`admin@trove.local`** / **`admin123`** *(change in `.env`)*.
 
-### Verify things are wired
+### Docker
 
-Log in as admin and visit **`/admin/mesh-health`**:
-- Chat and embed pings (green = Mesh is reachable and your key/models are valid)
-- SQLite product count vs. Chroma vector count (equal = dual-write is in sync)
+```bash
+docker compose up --build
+```
 
----
+## 📁 API Endpoints & Routes
 
-## Project layout
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Landing page |
+| `GET` | `/catalog` | Browsable product catalog with semantic search (`?q=...`) |
+| `GET` | `/catalog/{id}` | Product detail + "You might also like" kNN strip |
+| `GET` | `/recommendations` | Personalized AI recommendations for the logged-in user |
+| `POST` | `/events` | Batched behavioral event ingest (non-blocking) |
+| `POST` | `/auth/login` | Email/password authentication |
+| `POST` | `/auth/register` | User registration |
+| `GET` | `/admin/mesh-health` | Admin health dashboard (Mesh + sync status) |
+| `GET` | `/admin/digests` | Admin view of scheduled digest logs |
+| `GET` | `/admin/products` | Admin product CRUD management |
+| `GET` | `/docs` | Interactive API documentation (Swagger) |
+
+## 📂 Project Layout
 
 ```
 trove/
@@ -122,7 +115,7 @@ trove/
 │   ├── database.py           # SQLAlchemy engine + session
 │   ├── models.py             # ORM models
 │   ├── auth.py               # bcrypt + signed-cookie sessions
-│   ├── deps.py               # request-level dependencies
+│   ├── deps.py               # Request-level dependencies
 │   ├── mesh_client.py        # Mesh API (OpenAI-compatible) wrapper
 │   ├── vector_store.py       # Chroma wrapper + kNN + ping helpers
 │   ├── services/
@@ -132,8 +125,8 @@ trove/
 │   ├── agent/                # LangGraph state machine & trigger policy
 │   │   ├── graph.py          # StateGraph compilation & LangSmith setup
 │   │   ├── nodes.py          # analyze, decide, retrieve, evaluate, refine, rerank, generate
-│   │   ├── policy.py         # trigger threshold & fingerprint cache policy
-│   │   ├── runner.py         # recommendation agent execution & DB persistence
+│   │   ├── policy.py         # Trigger threshold & fingerprint cache policy
+│   │   ├── runner.py         # Recommendation agent execution & DB persistence
 │   │   └── state.py          # AgentState schema
 │   ├── scheduler/            # APScheduler background daily digest job
 │   ├── templates/            # Jinja2 HTML templates
@@ -143,22 +136,30 @@ trove/
 ├── .github/workflows/        # CI (SmartReco checks)
 ├── .env.example
 ├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
 └── run.py
 ```
 
----
+## Key Tables
 
-## Roadmap (build milestones)
+| Table | Purpose |
+|---|---|
+| `users` | id, email, password_hash, role, created_at |
+| `products` | id, title, description, category, level, price, image_url… |
+| `events` | id, user_id, session_id, event_type, product_id, payload_json |
+| `recommendations` | id, user_id, narrative, product_ids_json, fingerprint, source |
+| `digest_logs` | id, user_id, recommendation_id, subject, body, created_at |
 
-- [x] **Day 1** — scaffold, auth, DB schema, tracking, dual-write, base templates (0.1.0)
-- [x] **Day 2** — full admin CRUD + edit page, catalog chips/filters, "you might also like", Mesh health dashboard, Trove rebrand (0.2.0)
+## 🗺 Roadmap
+
+- [x] **Day 1** — Scaffold, auth, DB schema, tracking, dual-write, base templates (0.1.0)
+- [x] **Day 2** — Full admin CRUD + edit page, catalog chips/filters, "you might also like", Mesh health dashboard, Trove rebrand (0.2.0)
 - [x] **Day 3** — SCOPE.md documentation & activity summary service
 - [x] **Day 4** — LangGraph agent + RAG retrieval + recommendation storage + trigger policy & fingerprint caching
 - [x] **Day 5** — APScheduler daily digest + admin digest log view + LangSmith tracing
-- [x] **Day 6** — two-stage retrieval re-ranking, final verification & v1.0.0 release
+- [x] **Day 6** — Two-stage retrieval re-ranking, final verification & v1.0.0 release
 
----
-
-## License
+## 📄 License
 
 MIT — hackathon submission.
