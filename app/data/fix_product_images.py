@@ -81,13 +81,10 @@ def slugify(text: str) -> str:
 
 
 def generate_unique_image_url(product_id: int, title: str, category: str) -> str:
-    """Generate a 100% unique, topic-matched image URL for a product."""
+    """Generate a 100% unique, distinct photo image asset for a product."""
     slug = slugify(title)
-    photo_ids = CATEGORY_PHOTO_IDS.get(category) or CATEGORY_PHOTO_IDS["Backend"]
-    photo_id = photo_ids[product_id % len(photo_ids)]
+    return f"https://picsum.photos/seed/trove-{product_id}-{slug[:30]}/600/400"
 
-    # We use high-resolution Unsplash photo CDN URL with product ID signature + slug seed
-    return f"https://images.unsplash.com/photo-{photo_id}?w=600&auto=format&fit=crop&sig={product_id}&p={slug}"
 
 
 def fix_all_product_images():
