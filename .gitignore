@@ -24,9 +24,10 @@ env/
 *.db
 *.sqlite
 *.sqlite3
-data/
+/data/
 chroma_db/
 logs/
+
 
 # IDE
 .vscode/
